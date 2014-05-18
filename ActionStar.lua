@@ -75,7 +75,7 @@ function ActionStar:Reticle_UpdatePosition()
 	local tSize = Apollo.GetDisplaySize()
 	local nMidW, nMidH = tSize.nWidth/2, tSize.nHeight/2
 
-	self.wndReticle:SetAnchorOffsets(nMidW - nRetW/2, nMidH - nRetH/2, nMidW + nRetW/2, nMidH + nRetH + nRetH/2)
+	self.wndReticle:SetAnchorOffsets(nMidW - nRetW/2, nMidH - nRetH/2, nMidW + nRetW/2, nMidH + nRetH/2)
 	self.wndReticle:FindChild("ActionStar_ReticleSpriteTarget"):SetOpacity(0.3)
 end
 
