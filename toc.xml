@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<Addon Name="ActionStar" Version="0.1" Author="Xuerian" APIVersion="8" Description="Automatic mouselock/Action combat addon">
+    <Script Name="ActionStar.lua"/>
+    <Form Name="ActionStar.xml"/>
+</Addon>
