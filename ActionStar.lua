@@ -24,7 +24,7 @@ function ActionStar:OnLoad()
 	self:Reticle_UpdatePosition()
 
 	-- Targeting
-	Apollo.RegisterEventHandler("MouseoverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
+	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
 
 	-- Movement detection
 	Apollo.CreateTimer("ActionStar_Pulse", 0.2, true)
