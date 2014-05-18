@@ -22,6 +22,7 @@ function ActionStar:OnLoad()
 	self.wndReticle = Apollo.LoadForm("ActionStar.xml", "ActionStar_ReticleForm", "InWorldHudStratum", self)
 	self.wndReticle:Show(false)
 	self:Reticle_UpdatePosition()
+	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_UpdatePosition", self)
 
 	-- Targeting
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
