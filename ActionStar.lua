@@ -141,6 +141,12 @@ function ActionStar:EventHandler_SystemKeyDown(iKey)
 	-- Toggle mode
 	if iKey == 67 and Apollo.IsShiftKeyDown()then
 		self:SetActionMode(not self.bActiveIntent)
+	
+	-- Static hotkeys, F7 and F8
+	elseif iKey == 118 then
+		self:SetActionMode(true)
+	elseif iKey == 119 then
+		self:SetActionMode(false)
 	end
 end
 
