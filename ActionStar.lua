@@ -155,7 +155,7 @@ end
 function ActionStar:SetActionMode(bState)
 	self.bActiveIntent = bState
 	-- self.bIntentPaused = false
-	if GameLib.SetMouseLock() ~= bState then
+	if GameLib.IsMouseLockOn() ~= bState then
 		GameLib.SetMouseLock(bState)
 	end
 	self.wndReticle:Show(bState)
