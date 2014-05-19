@@ -1,6 +1,9 @@
 -- Carbine, full rights if you want to use any of it.
 
+-- Addon authors or Carbine, to add a window to the list of pausing windows, call
+-- Event_FireGenericEvent("GenericEvent_CombatMode_RegisterPausingWindow", wndHandle)
 -- ActionStar automatically detects immediately detected escapable windows, but redundant registration is not harmful.
+
 -- Add windows that don't close on escape here
 local tHardcodedForms = {
 	"RoverForm",
@@ -49,6 +52,9 @@ function ActionStar:OnLoad()
 	-- Keybinds
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
 
+	-- External windows
+	Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
+
 	-- Carbine, plz.
 	Apollo.RegisterEventHandler("AbilityWindowHasBeenToggled", "EventHandler_AbilityWindowDecidedToShowUp", self)
 end
@@ -85,6 +91,10 @@ function ActionStar:TimerHandler_FrameCrawl()
 		end
 	end
 	self:SetActionMode(true)
+end
+
+function ActionStar:EventHandler_RegisterPausingWindow(wndHandle)
+	RegisterWindow(wndHandle)
 end
 
 -- Poll unlocking frames
