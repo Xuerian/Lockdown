@@ -55,7 +55,7 @@ end
 
 -- Disover frames we should pause for
 local tPauseWindows = {}
-local function RegisterWindow(wnd, bIsRandomMustRefresh)
+local function RegisterWindow(wnd)
 	if wnd then
 		local sName = wnd:GetName()
 		for k,v in pairs(tPauseWindows) do
