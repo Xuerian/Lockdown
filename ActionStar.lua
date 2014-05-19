@@ -1,5 +1,6 @@
 -- Carbine, full rights if you want to use any of it.
 
+-- ActionStar automatically detects immediately detected escapable windows, but redundant registration is not harmful.
 -- Add windows that don't close on escape here
 local tHardcodedForms = {
 	"RoverForm",
@@ -107,6 +108,7 @@ function ActionStar:TimerHandler_FramePollPulse()
 	end
 end
 
+-- Ability window is dynamic? Re-register every time it is shown
 function ActionStar:EventHandler_AbilityWindowDecidedToShowUp()
 	local wnd = Apollo.FindWindowByName("AbilitiesBuilderForm")
 	if wnd then
