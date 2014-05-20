@@ -7,7 +7,8 @@
 -- Add windows that don't close on escape here
 local tHardcodedForms = {
 	"RoverForm",
-	"GeminiConsoleWindow"
+	"GeminiConsoleWindow",
+	"KeybindForm"
 }
 
 local ActionStar = {}
