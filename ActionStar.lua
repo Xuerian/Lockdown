@@ -2,7 +2,7 @@
 
 -- Addon authors or Carbine, to add a window to the list of pausing windows, call
 -- Event_FireGenericEvent("GenericEvent_CombatMode_RegisterPausingWindow", wndHandle)
--- ActionStar automatically detects immediately detected escapable windows, but redundant registration is not harmful.
+-- ActionStar automatically detects immediately created escapable windows, but redundant registration is not harmful.
 
 -- Add windows that don't close on escape here
 local tHardcodedForms = {
