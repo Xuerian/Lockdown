@@ -58,7 +58,7 @@ function Lockdown:OnLoad()
 
 	-- External windows
 	Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
-	Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindowName", "EventHandler_RegisterPausingWindowName", self)
+	-- Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindowName", "EventHandler_RegisterPausingWindowName", self)
 
 	-- Carbine, plz.
 	Apollo.RegisterEventHandler("AbilityWindowHasBeenToggled", "EventHandler_AbilityWindowDecidedToShowUp", self)
@@ -66,10 +66,10 @@ end
 
 -- Disover frames we should pause for
 local tPauseWindows = {}
-local tNameOnlyWindows = {
-	"AbilitiesBuilderForm",
-	"SocialPanelForm",
-}
+-- local tNameOnlyWindows = {
+-- 	"AbilitiesBuilderForm",
+-- 	"SocialPanelForm",
+-- }
 local tHookedNames = {}
 local function RegisterWindow(wnd)
 	if wnd then
@@ -85,6 +85,10 @@ local function RegisterWindow(wnd)
 		tPauseWindows[wnd] = wnd:GetName()
 	end
 end
+
+-- function Lockdown:RegisterWindowName(sName)
+-- 	table.insert(tNameOnlyWindows, sname)
+-- end
 
 function Lockdown:TimerHandler_FrameCrawl()
 	for _,strata in ipairs(Apollo.GetStrata()) do
@@ -111,6 +115,9 @@ end
 function Lockdown:EventHandler_RegisterPausingWindowName(sName)
 	RegisterWindowName(sName)
 end
+-- function Lockdown:EventHandler_RegisterPausingWindowName(sName)
+-- 	RegisterWindowName(sName)
+-- end
 
 -- Poll unlocking frames
 -- TODO: Allow resuming with open windows. 
