@@ -39,7 +39,6 @@ function Lockdown:AddWindowEventListener(sEvent, sName)
 		local wnd = Apollo.FindWindowByName(sName)
 		if wnd then
 			self_:RegisterWindow(wnd)
-			print(wnd:GetName())
 		end
 	end
 end
