@@ -32,6 +32,18 @@ function Lockdown:Init()
 	Apollo.RegisterAddon(self)
 end
 
+function Lockdown:AddWindowEventListener(sEvent, sName)
+	local sHandler = "EventHandler_"..sEvent
+	Apollo.RegisterEventHandler(sEvent, sHandler, self)
+	self[sHandler] = function(self_)
+		local wnd = Apollo.FindWindowByName(sName)
+		if wnd then
+			self_:RegisterWindow(wnd)
+			print(wnd:GetName())
+		end
+	end
+end
+
 function Lockdown:OnLoad()
 	-- Load reticle
 	self.xml = XmlDoc.CreateFromFile("Lockdown.xml")
@@ -61,7 +73,8 @@ function Lockdown:OnLoad()
 	-- Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindowName", "EventHandler_RegisterPausingWindowName", self)
 
 	-- Carbine, plz.
-	Apollo.RegisterEventHandler("AbilityWindowHasBeenToggled", "EventHandler_AbilityWindowDecidedToShowUp", self)
+	self:AddWindowEventListener("AbilityWindowHasBeenToggled", "AbilitiesBuilderForm")
+	self:AddWindowEventListener("GenericEvent_InitializeFriends", "SocialPanelForm")
 end
 
 -- Disover frames we should pause for
@@ -71,7 +84,7 @@ local tPauseWindows = {}
 -- 	"SocialPanelForm",
 -- }
 local tHookedNames = {}
-local function RegisterWindow(wnd)
+function Lockdown:RegisterWindow(wnd)
 	if wnd then
 		local sName = wnd:GetName()
 		-- Remove any old handles
@@ -95,7 +108,7 @@ function Lockdown:TimerHandler_FrameCrawl()
 		for _,wnd in ipairs(Apollo.GetWindowsInStratum(strata)) do
 			if wnd:IsStyleOn("Escapable") and not wnd:IsStyleOn("CloseOnExternalClick") then
 				-- print(wnd:GetName())
-				RegisterWindow(wnd)
+				Lockdown:RegisterWindow(wnd)
 			end
 		end
 	end
@@ -103,17 +116,14 @@ function Lockdown:TimerHandler_FrameCrawl()
 	for _,sName in ipairs(tAdditionalWindows) do
 		local wnd = Apollo.FindWindowByName(sName)
 		if wnd then
-			RegisterWindow(wnd)
+			Lockdown:RegisterWindow(wnd)
 		end
 	end
 	self:SetActionMode(true)
 end
 
 function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
-	RegisterWindow(wndHandle)
-end
-function Lockdown:EventHandler_RegisterPausingWindowName(sName)
-	RegisterWindowName(sName)
+	Lockdown:RegisterWindow(wndHandle)
 end
 -- function Lockdown:EventHandler_RegisterPausingWindowName(sName)
 -- 	RegisterWindowName(sName)
@@ -145,14 +155,6 @@ function Lockdown:TimerHandler_FramePollPulse()
 		if self.bActiveIntent and not GameLib.IsMouseLockOn() then
 			self:SetActionMode(true)
 		end
-	end
-end
-
--- Ability window is dynamic? Re-register every time it is shown
-function Lockdown:EventHandler_AbilityWindowDecidedToShowUp()
-	local wnd = Apollo.FindWindowByName("AbilitiesBuilderForm")
-	if wnd then
-		RegisterWindow(wnd)
 	end
 end
 
