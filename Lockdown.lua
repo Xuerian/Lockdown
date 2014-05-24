@@ -212,7 +212,7 @@ end
 
 function Lockdown:ButtonHandler_Bind()
 	bBindMode = true
-	self.wndOptionsButton:SetText(L.button_label_bind_wait)
+	self.wndOptionsButtonKey:SetText(L.button_label_bind_wait)
 end
 
 function Lockdown:ButtonHandler_Modifier()
@@ -253,7 +253,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	if bBindMode then
 		bBindMode = false
 		self.settings.key = iKey
-		self.wndOptionsButton:SetText(L.button_label_bind)
+		self.wndOptionsButtonKey:SetText(L.button_label_bind)
 		self:UpdateHotkeyMagicalRainbowUnicorns()
 		return
 	end
