@@ -2,8 +2,6 @@
 
 -- Addon authors or Carbine, to add a window to the list of pausing windows, call this for normal windows
 -- Event_FireGenericEvent("GenericEvent_CombatMode_RegisterPausingWindow", wndHandle)
--- or this for windows that don't give a reliable handle
--- Event_FireGenericEvent("GenericEvent_CombatMode_RegisterPausingWindowName", sName)
 
 -- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful.
 
@@ -13,6 +11,17 @@ local tAdditionalWindows = {
 	"GeminiConsoleWindow",
 	"KeybindForm"
 }
+
+-- Localization
+local tLocalization = {
+	en_us = {
+		button_configure = "Lockdown",
+		button_label_bind = "Click to bind toggle key",
+		button_label_bind_wait = "Press key..",
+		button_label_modifier = "Modifier"
+	}
+}
+local L = setmetatable({}, {__index = tLocalization.en_us})
 
 -- Addon init and variables
 local Lockdown = {}
@@ -26,7 +35,8 @@ Lockdown.settings = {}
 for k,v in pairs(tDefaults) do
 	Lockdown.settings[k] = v
 end
--- Debug
+
+-- Helpers
 local function print(...)
 	local out = {}
 	for i=1,select('#', ...) do
@@ -35,11 +45,15 @@ local function print(...)
 	Print(table.concat(out, ", "))
 end
 
+local function chatprint(text)
+	ChatSystemLib.PostOnChannel(2, text)
+end
+
 -- Startup
 function Lockdown:Init()
 	self.bActiveIntent = true
 	-- self.bIntentPaused = false
-	Apollo.RegisterAddon(self)
+	Apollo.RegisterAddon(self, true, L.button_configure)
 end
 
 function Lockdown:AddWindowEventListener(sEvent, sName)
@@ -80,6 +94,12 @@ function Lockdown:OnLoad()
 	self:Reticle_UpdatePosition()
 	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_UpdatePosition", self)
 
+	-- Options
+	Apollo.RegisterSlashCommand("lockdown", "OnConfigure", self)
+	self.wndOptions = Apollo.LoadForm("Lockdown.xml", "Lockdown_OptionsForm", nil, self)
+	self.wndOptionsButtonKey = self.wndOptions:FindChild("BindKey")
+	self.wndOptionsButtonModifier = self.wndOptions:FindChild("Modifier")
+
 	-- Targeting
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
 
@@ -103,6 +123,10 @@ function Lockdown:OnLoad()
 	-- Carbine, plz.
 	self:AddWindowEventListener("AbilityWindowHasBeenToggled", "AbilitiesBuilderForm")
 	self:AddWindowEventListener("GenericEvent_InitializeFriends", "SocialPanelForm")
+
+	-- Rainbows, unicorns, and kittens
+	-- Oh my
+	self:UpdateHotkeyMagicalRainbowUnicorns()
 end
 
 -- Disover frames we should pause for
@@ -186,8 +210,60 @@ function Lockdown:TimerHandler_FramePollPulse()
 	end
 end
 
+-- Options
+local bBindMode = false
+function Lockdown:OnConfigure()
+	self.wndOptionsButtonKey:SetText(L.button_label_bind)
+	self.wndOptionsButtonModifier:SetText(self.settings.modifier and self.settings.modifier or L.button_label_modifier)
+	self.wndOptions:Show(true, true)
+end
+
+function Lockdown:ButtonHandler_Bind()
+	bBindMode = true
+	self.wndOptionsButton:SetText(L.button_label_bind_wait)
+end
+
+function Lockdown:ButtonHandler_Modifier()
+	local mod = self.settings.modifier
+	if not mod then
+		mod = "shift"
+	elseif mod == "shift" then
+		mod = "control"
+	else
+		mod = false
+	end
+	self.settings.modifier = mod
+	self:UpdateHotkeyMagicalRainbowUnicorns()
+end
+
+function Lockdown:ButtonHandler_Close()
+	self.wndOptions:Show(false, true)
+end
+
+local cKey, mModifier
+function Lockdown:UpdateHotkeyMagicalRainbowUnicorns()
+	cKey = self.settings.key
+	local mod = self.settings.modifier
+	if mod == "shift" then
+		mModifier = Apollo.IsShiftKeyDown
+	elseif mod == "control" then
+		mModifier = Apollo.IsControlKeyDown
+	else
+		mModifier = false
+	end
+	self.wndOptionsButtonModifier:SetText(mod and mod or L.button_label_modifier)
+end
+
 -- Keys
-function Lockdown:EventHandler_SystemKeyDown(iKey)
+function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
+	if bBindMode then
+		bBindMode = false
+		self.settings.key = iKey
+		self.wndOptionsButton:SetText(L.button_label_bind)
+		self:UpdateHotkeyMagicalRainbowUnicorns()
+		return
+	end
+
 	-- Open options on Escape
 	if iKey == 27 and self.bActiveIntent then
 		if GameLib.GetTargetUnit() then
@@ -196,17 +272,18 @@ function Lockdown:EventHandler_SystemKeyDown(iKey)
 		else
 			self:SuspendActionMode()
 		end
-	end
-
-	-- Toggle mode
-	if iKey == 67 and Apollo.IsShiftKeyDown()then
-		self:SetActionMode(not self.bActiveIntent)
 	
 	-- Static hotkeys, F7 and F8
 	elseif iKey == 118 then
 		self:SetActionMode(true)
 	elseif iKey == 119 then
 		self:SetActionMode(false)
+
+	-- Toggle mode
+	elseif iKey == cKey then
+		if not mModifier or mModifier() then
+			self:SetActionMode(not self.bActiveIntent)
+		end
 	end
 end
 
