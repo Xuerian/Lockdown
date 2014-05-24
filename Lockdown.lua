@@ -46,7 +46,7 @@ end
 function Lockdown:OnLoad()
 	-- Load reticle
 	self.xml = XmlDoc.CreateFromFile("Lockdown.xml")
-	self.wndReticle = Apollo.LoadForm("Lockdown.xml", "Lockdown_ReticleForm", "InWorldHudStratum", self)
+	self.wndReticle = Apollo.LoadForm("Lockdown.xml", "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
 	self.wndReticle:Show(false)
 	self:Reticle_UpdatePosition()
 	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_UpdatePosition", self)
