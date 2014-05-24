@@ -45,6 +45,7 @@ local function print(...)
 	Print(table.concat(out, ", "))
 end
 
+-- Print without debug
 local function chatprint(text)
 	ChatSystemLib.PostOnChannel(2, text)
 end
@@ -126,7 +127,6 @@ function Lockdown:OnLoad()
 
 	-- External windows
 	Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
-	-- Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindowName", "EventHandler_RegisterPausingWindowName", self)
 
 	-- Carbine, plz.
 	self:AddWindowEventListener("AbilityWindowHasBeenToggled", "AbilitiesBuilderForm")
@@ -139,11 +139,6 @@ end
 
 -- Disover frames we should pause for
 local tPauseWindows = {}
--- local tNameOnlyWindows = {
--- 	"AbilitiesBuilderForm",
--- 	"SocialPanelForm",
--- }
-local tHookedNames = {}
 function Lockdown:RegisterWindow(wnd)
 	if wnd then
 		local sName = wnd:GetName()
@@ -159,15 +154,10 @@ function Lockdown:RegisterWindow(wnd)
 	end
 end
 
--- function Lockdown:RegisterWindowName(sName)
--- 	table.insert(tNameOnlyWindows, sname)
--- end
-
 function Lockdown:TimerHandler_FrameCrawl()
 	for _,strata in ipairs(Apollo.GetStrata()) do
 		for _,wnd in ipairs(Apollo.GetWindowsInStratum(strata)) do
 			if wnd:IsStyleOn("Escapable") and not wnd:IsStyleOn("CloseOnExternalClick") then
-				-- print(wnd:GetName())
 				Lockdown:RegisterWindow(wnd)
 			end
 		end
@@ -185,9 +175,6 @@ end
 function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
 	Lockdown:RegisterWindow(wndHandle)
 end
--- function Lockdown:EventHandler_RegisterPausingWindowName(sName)
--- 	RegisterWindowName(sName)
--- end
 
 -- Poll unlocking frames
 -- TODO: Allow resuming with open windows. 
@@ -200,14 +187,6 @@ function Lockdown:TimerHandler_FramePollPulse()
 			bWindowUnlock = true
 		end
 	end
-	-- Poll name only windows
-	-- TERRIBLY LAGGY?
-	-- for _,sName in ipairs(tNameOnlyWindows) do
-	-- 	local wnd = Apollo.FindWindowByName(sName)
-	-- 	if wnd and wnd:IsShown() then
-	-- 		bWindowUnlock = true
-	-- 	end
-	-- end
 	-- Update state 
 	if bWindowUnlock then
 		self:SuspendActionMode()
@@ -248,6 +227,7 @@ function Lockdown:ButtonHandler_Close()
 	self.wndOptions:Show(false, true)
 end
 
+-- Store key and modifier check value||method each time they change
 local cKey, mModifier
 function Lockdown:UpdateHotkeyMagicalRainbowUnicorns()
 	cKey = self.settings.key
@@ -264,6 +244,7 @@ end
 
 -- Keys
 function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
+	-- Listen for key to bind
 	if bBindMode then
 		bBindMode = false
 		self.settings.key = iKey
