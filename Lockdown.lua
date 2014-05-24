@@ -83,7 +83,6 @@ function Lockdown:OnSave(eLevel)
 end
 
 function Lockdown:OnRestore(eLevel, tData)
-	print(eLevel, tData)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account and tData then
 		self.settings = tData
 		for k,v in pairs(tDefaults) do
