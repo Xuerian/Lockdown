@@ -320,8 +320,10 @@ end
 
 -- Adjust reticle
 function Lockdown:Reticle_UpdatePosition()
-	local nRetW = self.wndReticle:FindChild("Lockdown_ReticleForm"):GetWidth()
-	local nRetH = self.wndReticle:FindChild("Lockdown_ReticleForm"):GetHeight() 
+	-- Doing it wrong, apparently. 
+	-- local nRetW = self.wndReticle:FindChild("Lockdown_ReticleForm"):GetWidth()
+	-- local nRetH = self.wndReticle:FindChild("Lockdown_ReticleForm"):GetHeight() 
+	local nRetW, nRetH = 32, 32
 
 	local tSize = Apollo.GetDisplaySize()
 	local nMidW, nMidH = tSize.nWidth/2, tSize.nHeight/2
