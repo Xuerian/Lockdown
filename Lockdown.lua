@@ -177,23 +177,28 @@ function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
 end
 
 -- Poll unlocking frames
--- TODO: Allow resuming with open windows. 
 local bWindowUnlock = false
+local tSkipWindows = {}
 function Lockdown:TimerHandler_FramePollPulse()
 	bWindowUnlock = false
 	-- Poll windows
 	for wnd in pairs(tPauseWindows) do
+		-- Unlock if visible and not currently skipped
 		if wnd:IsShown() then
-			bWindowUnlock = true
+			if not tSkipWindows[wnd] then
+				bWindowUnlock = true
+			end
+		-- Expire hidden from skiplist
+		elseif tSkipWindows[wnd] then
+			tSkipWindows[wnd] = nil
 		end
 	end
 	-- Update state 
 	if bWindowUnlock then
 		self:SuspendActionMode()
-	else
-		if self.bActiveIntent and not GameLib.IsMouseLockOn() then
-			self:SetActionMode(true)
-		end
+
+	elseif self.bActiveIntent and not GameLib.IsMouseLockOn() then
+		self:SetActionMode(true)
 	end
 end
 
@@ -269,8 +274,18 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		self:SetActionMode(false)
 
 	-- Toggle mode
-	elseif iKey == cKey then
-		if not mModifier or mModifier() then
+	elseif iKey == cKey and (not mModifier or mModifier()) then
+		-- Save currently active windows and resume
+		if self.bActiveIntent and not GameLib.IsMouseLockOn() then
+			wipe(tSkipWindows)
+			for wnd in pairs(tPauseWindows) do
+				if wnd:IsShown() then
+					tSkipWindows[wnd] = true
+				end
+			end
+			self:SetActionMode(true)
+		else
+			-- Toggle
 			self:SetActionMode(not self.bActiveIntent)
 		end
 	end
