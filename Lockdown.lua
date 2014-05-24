@@ -205,7 +205,6 @@ end
 local bBindMode = false
 function Lockdown:OnConfigure()
 	self.wndOptionsButtonKey:SetText(L.button_label_bind)
-	self.wndOptionsButtonModifier:SetText(self.settings.modifier and self.settings.modifier or L.button_label_modifier)
 	self.wndOptions:Show(true, true)
 end
 
