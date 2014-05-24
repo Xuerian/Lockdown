@@ -14,8 +14,18 @@ local tAdditionalWindows = {
 	"KeybindForm"
 }
 
+-- Addon init and variables
 local Lockdown = {}
 
+local tDefaults = {
+	key = 192, -- backquote
+	modifier = false
+}
+
+Lockdown.settings = {}
+for k,v in pairs(tDefaults) do
+	Lockdown.settings[k] = v
+end
 -- Debug
 local function print(...)
 	local out = {}
@@ -40,6 +50,25 @@ function Lockdown:AddWindowEventListener(sEvent, sName)
 		if wnd then
 			self_:RegisterWindow(wnd)
 		end
+	end
+end
+
+function Lockdown:OnSave(eLevel)
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+		return self.settings
+	end
+end
+
+function Lockdown:OnRestore(eLevel, tData)
+	print(eLevel, tData)
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account and tData then
+		self.settings = tData
+		for k,v in pairs(tDefaults) do
+			if self.settings[k] == nil then
+				self.settings[k] = v
+			end
+		end
+		self:UpdateHotkeyMagicalRainbowUnicorns()
 	end
 end
 
