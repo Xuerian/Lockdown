@@ -49,6 +49,13 @@ local function chatprint(text)
 	ChatSystemLib.PostOnChannel(2, text)
 end
 
+-- Wipe a table for reuse
+local function wipe(t)
+	for k,v in pairs(t) do
+		t[k] = nil
+	end
+end
+
 -- Startup
 function Lockdown:Init()
 	self.bActiveIntent = true
@@ -56,6 +63,7 @@ function Lockdown:Init()
 	Apollo.RegisterAddon(self, true, L.button_configure)
 end
 
+-- Register a window update for a given event
 function Lockdown:AddWindowEventListener(sEvent, sName)
 	local sHandler = "EventHandler_"..sEvent
 	Apollo.RegisterEventHandler(sEvent, sHandler, self)
