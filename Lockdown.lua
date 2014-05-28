@@ -14,7 +14,8 @@ local tAdditionalWindows = {
 
 -- Add windows to ignore here
 local tIgnoreWindows = {
-	StoryPanelInformational = true
+	StoryPanelInformational = true,
+	StoryPanelBubble = true,
 }
 
 -- Localization
