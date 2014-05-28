@@ -115,6 +115,8 @@ function Lockdown:OnLoad()
 
 	-- Targeting
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
+	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
+	self.timerRelock:Stop()
 
 	-- Crawl for frames to hook
 	self.timerFrameCrawl = ApolloTimer.Create(5.0, false, "TimerHandler_FrameCrawl", self)
@@ -211,6 +213,12 @@ function Lockdown:TimerHandler_FramePollPulse()
 	elseif self.bActiveIntent and not GameLib.IsMouseLockOn() then
 		self:SetActionMode(true)
 	end
+
+	return bWindowUnlock
+end
+
+function Lockdown:TimerHandler_Relock()
+	self:SetActionMode(true)
 end
 
 -- Options
@@ -269,12 +277,15 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	end
 
 	-- Open options on Escape
+	-- TODO: don't reset cursor position when a blocking window is still open
 	if iKey == 27 and self.bActiveIntent then
-		if GameLib.GetTargetUnit() then
-			GameLib.SetTargetUnit()
-			self:SetActionMode(true)
-		else
-			self:SuspendActionMode()
+		if not self:TimerHandler_FramePollPulse() then
+			if GameLib.GetTargetUnit() then
+				GameLib.SetTargetUnit()
+				self.timerRelock:Start()
+			else
+				self:SuspendActionMode()
+			end
 		end
 	
 	-- Static hotkeys, F7 and F8
