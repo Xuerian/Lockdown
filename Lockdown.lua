@@ -200,6 +200,12 @@ function Lockdown:TimerHandler_FramePollPulse()
 			tSkipWindows[wnd] = nil
 		end
 	end
+
+	-- CSI(?) dialogs
+	if CSIsLib.GetActiveCSI() and not tSkipWindows.CSI then
+		bWindowUnlock = true
+	end
+
 	-- Update state 
 	if bWindowUnlock then
 		self:SuspendActionMode()
@@ -288,6 +294,9 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 				if wnd:IsShown() then
 					tSkipWindows[wnd] = true
 				end
+			end
+			if CSIsLib.GetActiveCSI() then
+				tSkipWindows.CSI = true
 			end
 			self:SetActionMode(true)
 		else
