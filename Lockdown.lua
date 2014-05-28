@@ -117,15 +117,13 @@ function Lockdown:OnLoad()
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
 
 	-- Crawl for frames to hook
-	Apollo.CreateTimer("Lockdown_FrameCrawl", 5.0, false)
-	Apollo.RegisterTimerHandler("Lockdown_FrameCrawl", "TimerHandler_FrameCrawl", self)
+	self.timerFrameCrawl = ApolloTimer.Create(5.0, false, "TimerHandler_FrameCrawl", self)
 
 	-- Poll frames for visibility.
 	-- I'd much rather use hooks or callbacks or events, but I can't hook, I can't find the right callbacks/they don't work, and the events aren't consistant or listed. 
 	-- You made me do this, Carbine.
-	Apollo.CreateTimer("Lockdown_FramePollPulse", 0.5, true)
-	Apollo.RegisterTimerHandler("Lockdown_FramePollPulse", "TimerHandler_FramePollPulse", self)
-
+	self.timerFramePollPulse = ApolloTimer.Create(0.5, true, "TimerHandler_FramePollPulse", self)
+	
 	-- Keybinds
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
 
