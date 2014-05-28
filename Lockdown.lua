@@ -9,7 +9,13 @@
 local tAdditionalWindows = {
 	"RoverForm",
 	"GeminiConsoleWindow",
-	"KeybindForm"
+	"KeybindForm",
+	"DuelRequest",
+	-- Necessary?
+	"RoleConfirm",
+	"JoinGame",
+	"VoteKick",
+	"VoteSurrender",
 }
 
 -- Add windows to ignore here
@@ -155,7 +161,7 @@ function Lockdown:RegisterWindow(wnd)
 				end
 			end
 			-- Add new handle
-			tPauseWindows[wnd] = wnd:GetName()
+			tPauseWindows[wnd] = sName
 			return true
 		end
 	end
