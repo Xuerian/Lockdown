@@ -12,6 +12,11 @@ local tAdditionalWindows = {
 	"KeybindForm"
 }
 
+-- Add windows to ignore here
+local tIgnoreWindows = {
+	StoryPanelInformational = true
+}
+
 -- Localization
 local tLocalization = {
 	en_us = {
@@ -141,16 +146,19 @@ local tPauseWindows = {}
 function Lockdown:RegisterWindow(wnd)
 	if wnd then
 		local sName = wnd:GetName()
-		-- Remove any old handles
-		for k,v in pairs(tPauseWindows) do
-			if v == sName then
-				tPauseWindows[sName] = nil
-				break
+		if not tIgnoreWindows[sName] then
+			-- Remove any old handles
+			for k,v in pairs(tPauseWindows) do
+				if v == sName then
+					tPauseWindows[sName] = nil
+				end
 			end
+			-- Add new handle
+			tPauseWindows[wnd] = wnd:GetName()
+			return true
 		end
-		-- Add new handle
-		tPauseWindows[wnd] = wnd:GetName()
 	end
+	return false
 end
 
 function Lockdown:TimerHandler_FrameCrawl()
