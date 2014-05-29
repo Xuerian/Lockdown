@@ -53,7 +53,7 @@ end
 local function print(...)
 	local out = {}
 	for i=1,select('#', ...) do
-		table.insert(out, ("%s [%s]"):format(tostring(select(i, ...)), type(select(i, ...))))
+		table.insert(out, tostring(select(i, ...)))
 	end
 	Print(table.concat(out, ", "))
 end
@@ -73,7 +73,6 @@ end
 -- Startup
 function Lockdown:Init()
 	self.bActiveIntent = true
-	-- self.bIntentPaused = false
 	Apollo.RegisterAddon(self, true, L.button_configure)
 end
 
@@ -333,7 +332,6 @@ end
 -- Action mode toggle
 function Lockdown:SetActionMode(bState)
 	self.bActiveIntent = bState
-	-- self.bIntentPaused = false
 	if GameLib.IsMouseLockOn() ~= bState then
 		GameLib.SetMouseLock(bState)
 	end
