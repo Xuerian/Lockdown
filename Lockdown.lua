@@ -16,6 +16,7 @@ local tAdditionalWindows = {
 	"JoinGame",
 	"VoteKick",
 	"VoteSurrender",
+	"AddonError",
 }
 
 -- Add windows to ignore here
