@@ -23,13 +23,16 @@ local tAdditionalWindows = {
 local tIgnoreWindows = {
 	StoryPanelInformational = true,
 	StoryPanelBubble = true,
+	ProcsIcon1 = true,
+	ProcsIcon2 = true,
+	ProcsIcon3 = true,
 }
 
 -- Localization
 local tLocalization = {
 	en_us = {
 		button_configure = "Lockdown",
-		button_label_bind = "Click to bind toggle key",
+		button_label_bind = "Click to bind",
 		button_label_bind_wait = "Press key..",
 		button_label_modifier = "Modifier"
 	}
@@ -40,8 +43,13 @@ local L = setmetatable({}, {__index = tLocalization.en_us})
 local Lockdown = {}
 
 local tDefaults = {
-	key = 192, -- backquote
-	modifier = false
+	toggle_key = 192, -- backquote
+	toggle_modifier = false,
+	locktarget_key = 20, -- caps lock
+	locktarget_modifier = false,
+	reticle_show = true,
+	reticle_target = true,
+	reticle_target_delay = 0
 }
 
 Lockdown.settings = {}
@@ -102,8 +110,18 @@ function Lockdown:OnRestore(eLevel, tData)
 				self.settings[k] = v
 			end
 		end
-		self:UpdateHotkeyMagicalRainbowUnicorns()
+		self:KeyOrModifierUpdated()
+		self.timerDelayedTarget:Set(self.settings.reticle_target_delay, false)
 	end
+end
+
+local function children_by_name(wnd, t)
+	local t = t or {}
+	for _,child in ipairs(wnd:GetChildren()) do
+		t[child:GetName()] = child
+		children_by_name(child, t)
+	end
+	return t
 end
 
 function Lockdown:OnLoad()
@@ -114,16 +132,21 @@ function Lockdown:OnLoad()
 	self:Reticle_UpdatePosition()
 	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_UpdatePosition", self)
 
+	-- For some reason on reloadui, the mouse locks in the NE screen quadrant
+	ApolloTimer.Create(0.7, false, "TimerHandler_InitialLock", self)
+
 	-- Options
 	Apollo.RegisterSlashCommand("lockdown", "OnConfigure", self)
 	self.wndOptions = Apollo.LoadForm("Lockdown.xml", "Lockdown_OptionsForm", nil, self)
-	self.wndOptionsButtonKey = self.wndOptions:FindChild("BindKey")
-	self.wndOptionsButtonModifier = self.wndOptions:FindChild("Modifier")
+	self.tWnd = children_by_name(self.wndOptions)
 
 	-- Targeting
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
+	Apollo.RegisterEventHandler("TargetUnitChanged", "EventHandler_TargetUnitChanged", self)
 	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerRelock:Stop()
+	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
+	self.timerDelayedTarget:Stop()
 
 	-- Crawl for frames to hook
 	self.timerFrameCrawl = ApolloTimer.Create(5.0, false, "TimerHandler_FrameCrawl", self)
@@ -145,7 +168,14 @@ function Lockdown:OnLoad()
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
-	self:UpdateHotkeyMagicalRainbowUnicorns()
+	self:KeyOrModifierUpdated()
+end
+
+function Lockdown:TimerHandler_InitialLock()
+	if self.bActiveIntent then
+		GameLib:SetMouseLock(false)
+		GameLib:SetMouseLock(true)
+	end
 end
 
 -- Disover frames we should pause for
@@ -162,6 +192,7 @@ function Lockdown:RegisterWindow(wnd)
 			end
 			-- Add new handle
 			tPauseWindows[wnd] = sName
+			-- print(sName)
 			return true
 		end
 	end
@@ -229,19 +260,13 @@ function Lockdown:TimerHandler_Relock()
 end
 
 -- Options
-local bBindMode = false
-function Lockdown:OnConfigure()
-	self.wndOptionsButtonKey:SetText(L.button_label_bind)
-	self.wndOptions:Show(true, true)
+local bBindMode, sWhichBind = false, nil
+local function OnBindButton(btn, optkey)
+	-- body
 end
 
-function Lockdown:ButtonHandler_Bind()
-	bBindMode = true
-	self.wndOptionsButtonKey:SetText(L.button_label_bind_wait)
-end
-
-function Lockdown:ButtonHandler_Modifier()
-	local mod = self.settings.modifier
+local function OnModifierBtn(btn, optkey)
+	local mod = self.settings[optkey]
 	if not mod then
 		mod = "shift"
 	elseif mod == "shift" then
@@ -249,37 +274,110 @@ function Lockdown:ButtonHandler_Modifier()
 	else
 		mod = false
 	end
-	self.settings.modifier = mod
-	self:UpdateHotkeyMagicalRainbowUnicorns()
 end
 
-function Lockdown:ButtonHandler_Close()
+-- Enter bind mode for a given binding button
+local function BindClick(btn, which)
+	if not bBindMode then
+		bBindMode = true
+		sWhichBind = which
+		btn:SetText(L.button_label_bind_wait)
+	end
+end
+
+-- Cycle modifier for a given modifier button
+local function ModifierClick(btn, which)
+	local mod = Lockdown.settings[which]
+	if not mod then
+		mod = "shift"
+	elseif mod == "shift" then
+		mod = "control"
+	else
+		mod = false
+	end
+	Lockdown.settings[which] = mod
+	Lockdown:KeyOrModifierUpdated()
+	Lockdown:UpdateConfigUI()
+end
+
+-- UI callbacks
+function Lockdown:OnToggleKeyBtn(btn)
+	BindClick(btn, "toggle_key")
+end
+
+function Lockdown:OnToggleModifierBtn(btn)
+	ModifierClick(btn, "toggle_modifier")
+end
+
+function Lockdown:OnLockTargetKeyBtn(btn)
+	BindClick(btn, "locktarget_key")
+end
+
+function Lockdown:OnLockTargetModifierBtn(btn)
+	ModifierClick(btn, "locktarget_modifier")
+end
+
+function Lockdown:OnReticleTargetBtn(btn)
+	self.settings.reticle_target = btn:IsChecked()
+end
+
+function Lockdown:OnReticleShowBtn(btn)
+	self.settings.reticle_show = btn:IsChecked()
+end
+
+function Lockdown:OnTargetDelaySlider(btn)
+	self.settings.reticle_target_delay = btn:GetValue()
+	self.timerDelayedTarget:Set(self.settings.reticle_target_delay, false)
+end
+
+function Lockdown:OnConfigure()
+	self:UpdateConfigUI()
+	self.wndOptions:Show(true, true)
+end
+
+-- Update all text in config window
+function Lockdown:UpdateConfigUI()
+	self.tWnd.ToggleKeyBtn:SetText(L.button_label_bind)
+	self.tWnd.LockTargetKeyBtn:SetText(L.button_label_bind)
+	self.tWnd.ToggleModifierBtn:SetText(self.settings.toggle_modifier and self.settings.toggle_modifier or L.button_label_modifier)
+	self.tWnd.LockTargetModifierBtn:SetText(self.settings.locktarget_modifier and self.settings.locktarget_modifier or L.button_label_modifier)
+	self.tWnd.ReticleShowBtn:SetCheck(self.settings.reticle_show)
+	self.tWnd.ReticleTargetBtn:SetCheck(self.settings.reticle_target)
+	self.tWnd.TargetDelaySlider:SetValue(self.settings.reticle_target_delay)
+end
+
+function Lockdown:OnCloseButton()
 	self.wndOptions:Show(false, true)
 end
 
--- Store key and modifier check value||method each time they change
-local cKey, mModifier
-function Lockdown:UpdateHotkeyMagicalRainbowUnicorns()
-	cKey = self.settings.key
-	local mod = self.settings.modifier
+-- Store key and modifier check function
+local toggle_key, toggle_modifier, locktarget_key, locktarget_modifier
+local function Upvalues(whichkey, whichmod)
+	local mod = Lockdown.settings[whichmod]
 	if mod == "shift" then
-		mModifier = Apollo.IsShiftKeyDown
+		mod = Apollo.IsShiftKeyDown
 	elseif mod == "control" then
-		mModifier = Apollo.IsControlKeyDown
+		mod = Apollo.IsControlKeyDown
 	else
-		mModifier = false
+		mod = false
 	end
-	self.wndOptionsButtonModifier:SetText(mod and mod or L.button_label_modifier)
+	return Lockdown.settings[whichkey], mod
+end
+
+function Lockdown:KeyOrModifierUpdated()
+	toggle_key, toggle_modifier = Upvalues("toggle_key", "toggle_modifier")
+	locktarget_key, locktarget_modifier = Upvalues("locktarget_key", "locktarget_modifier")
 end
 
 -- Keys
+local uLockedTarget
 function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Listen for key to bind
 	if bBindMode then
 		bBindMode = false
-		self.settings.key = iKey
-		self.wndOptionsButtonKey:SetText(L.button_label_bind)
-		self:UpdateHotkeyMagicalRainbowUnicorns()
+		self.settings[sWhichBind] = iKey
+		self:KeyOrModifierUpdated()
+		self:UpdateConfigUI()
 		return
 	end
 
@@ -302,7 +400,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		self:SetActionMode(false)
 
 	-- Toggle mode
-	elseif iKey == cKey and (not mModifier or mModifier()) then
+	elseif iKey == toggle_key and (not toggle_modifier or toggle_modifier()) then
 		-- Save currently active windows and resume
 		if self.bActiveIntent and not GameLib.IsMouseLockOn() then
 			wipe(tSkipWindows)
@@ -319,14 +417,44 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 			-- Toggle
 			self:SetActionMode(not self.bActiveIntent)
 		end
+	
+	-- Lock target
+	elseif iKey == locktarget_key and (not locktarget_modifier or locktarget_modifier()) then
+		if uLockedTarget then
+			uLockedTarget = nil
+			GameLib.SetTargetUnit()
+			-- TODO: Locked target indicator instead of clearing target
+		else
+			uLockedTarget = GameLib.GetTargetUnit()
+		end
 	end
 end
 
 -- Targeting
+local uLastMouseover
 function Lockdown:EventHandler_MouseOverUnitChanged(unit)
 	if unit and GameLib.IsMouseLockOn() then
-		GameLib.SetTargetUnit(unit)
+		if unit ~= GameLib.GetTargetUnit() then
+			if not uLockedTarget or uLockedTarget:IsDead() then
+				if self.settings.reticle_target_delay ~= 0 then
+					uLastMouseover = unit
+					self.timerDelayedTarget:Start()
+				else
+					GameLib.SetTargetUnit(unit)
+				end
+			end
+		elseif self.settings.reticle_target_delay ~= 0 then
+			self.timerDelayedTarget:Stop()
+		end
 	end
+end
+
+function Lockdown:TimerHandler_DelayedTarget()
+	GameLib.SetTargetUnit(uLastMouseover)
+end
+
+function Lockdown:EventHandler_TargetUnitChanged()
+	uLockedTarget = nil
 end
 
 -- Action mode toggle
@@ -335,13 +463,12 @@ function Lockdown:SetActionMode(bState)
 	if GameLib.IsMouseLockOn() ~= bState then
 		GameLib.SetMouseLock(bState)
 	end
-	self.wndReticle:Show(bState)
+	self.wndReticle:Show(bState and self.settings.reticle_show)
 	-- TODO: Sounds
 end
 
 -- Suspend without disabling
 function Lockdown:SuspendActionMode()
-	-- self.bIntentPaused = true
 	if GameLib.IsMouseLockOn() then
 		GameLib.SetMouseLock(false)
 		self.wndReticle:Show(false)
