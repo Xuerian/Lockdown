@@ -141,6 +141,7 @@ function Lockdown:OnLoad()
 	self.tWnd = children_by_name(self.wndOptions)
 
 	-- Targeting
+	-- TODO: Only do this when settings.reticle_target is on
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
 	Apollo.RegisterEventHandler("TargetUnitChanged", "EventHandler_TargetUnitChanged", self)
 	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
@@ -433,7 +434,7 @@ end
 -- Targeting
 local uLastMouseover
 function Lockdown:EventHandler_MouseOverUnitChanged(unit)
-	if unit and GameLib.IsMouseLockOn() then
+	if unit and self.settings.reticle_target and GameLib.IsMouseLockOn() then
 		if unit ~= GameLib.GetTargetUnit() then
 			if not uLockedTarget or uLockedTarget:IsDead() then
 				if self.settings.reticle_target_delay ~= 0 then
