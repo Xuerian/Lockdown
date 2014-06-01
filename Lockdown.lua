@@ -47,9 +47,12 @@ local tDefaults = {
 	toggle_modifier = false,
 	locktarget_key = 20, -- caps lock
 	locktarget_modifier = false,
+	free_with_shift = false,
+	free_with_ctrl = false,
+	free_with_alt = false,
 	reticle_show = true,
 	reticle_target = true,
-	reticle_target_delay = 0
+	reticle_target_delay = 0,
 }
 
 Lockdown.settings = {}
@@ -159,6 +162,7 @@ function Lockdown:OnLoad()
 	
 	-- Keybinds
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
+	self.timerFreeKeys = ApolloTimer.Create(0.05, true, "TimerHandler_FreeKeys", self)
 
 	-- External windows
 	Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
@@ -224,33 +228,36 @@ end
 
 -- Poll unlocking frames
 local bWindowUnlock = false
+local bFreeingMouse = false -- User freeing mouse with a modifier key
 local tSkipWindows = {}
 function Lockdown:TimerHandler_FramePollPulse()
 	bWindowUnlock = false
-	-- Poll windows
-	for wnd in pairs(tPauseWindows) do
-		-- Unlock if visible and not currently skipped
-		if wnd:IsShown() then
-			if not tSkipWindows[wnd] then
-				bWindowUnlock = true
+	if not bFreeingMouse then
+		-- Poll windows
+		for wnd in pairs(tPauseWindows) do
+			-- Unlock if visible and not currently skipped
+			if wnd:IsShown() then
+				if not tSkipWindows[wnd] then
+					bWindowUnlock = true
+				end
+			-- Expire hidden from skiplist
+			elseif tSkipWindows[wnd] then
+				tSkipWindows[wnd] = nil
 			end
-		-- Expire hidden from skiplist
-		elseif tSkipWindows[wnd] then
-			tSkipWindows[wnd] = nil
 		end
-	end
 
-	-- CSI(?) dialogs
-	if CSIsLib.GetActiveCSI() and not tSkipWindows.CSI then
-		bWindowUnlock = true
-	end
+		-- CSI(?) dialogs
+		if CSIsLib.GetActiveCSI() and not tSkipWindows.CSI then
+			bWindowUnlock = true
+		end
 
-	-- Update state 
-	if bWindowUnlock then
-		self:SuspendActionMode()
+		-- Update state 
+		if bWindowUnlock then
+			self:SuspendActionMode()
 
-	elseif self.bActiveIntent and not GameLib.IsMouseLockOn() then
-		self:SetActionMode(true)
+		elseif self.bActiveIntent and not GameLib.IsMouseLockOn() then
+			self:SetActionMode(true)
+		end
 	end
 
 	return bWindowUnlock
@@ -262,10 +269,6 @@ end
 
 -- Options
 local bBindMode, sWhichBind = false, nil
-local function OnBindButton(btn, optkey)
-	-- body
-end
-
 local function OnModifierBtn(btn, optkey)
 	local mod = self.settings[optkey]
 	if not mod then
@@ -326,6 +329,18 @@ function Lockdown:OnReticleShowBtn(btn)
 	self.settings.reticle_show = btn:IsChecked()
 end
 
+function Lockdown:OnFreeWithShiftBtn(btn)
+	self.settings.free_with_shift = btn:IsChecked()
+end
+
+function Lockdown:OnFreeWithCtrlBtn(btn)
+	self.settings.free_with_ctrl = btn:IsChecked()
+end
+
+function Lockdown:OnFreeWithAltBtn(btn)
+	self.settings.free_with_alt = btn:IsChecked()
+end
+
 function Lockdown:OnTargetDelaySlider(btn)
 	self.settings.reticle_target_delay = btn:GetValue()
 	self.timerDelayedTarget:Set(self.settings.reticle_target_delay, false)
@@ -345,6 +360,9 @@ function Lockdown:UpdateConfigUI()
 	self.tWnd.ReticleShowBtn:SetCheck(self.settings.reticle_show)
 	self.tWnd.ReticleTargetBtn:SetCheck(self.settings.reticle_target)
 	self.tWnd.TargetDelaySlider:SetValue(self.settings.reticle_target_delay)
+	self.tWnd.FreeWithShiftBtn:SetCheck(self.settings.free_with_shift)
+	self.tWnd.FreeWithCtrlBtn:SetCheck(self.settings.free_with_ctrl)
+	self.tWnd.FreeWithAltBtn:SetCheck(self.settings.free_with_alt)	
 end
 
 function Lockdown:OnCloseButton()
@@ -368,6 +386,11 @@ end
 function Lockdown:KeyOrModifierUpdated()
 	toggle_key, toggle_modifier = Upvalues("toggle_key", "toggle_modifier")
 	locktarget_key, locktarget_modifier = Upvalues("locktarget_key", "locktarget_modifier")
+	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
+		self.timerFreeKeys:Start()
+	else
+		self.timerFreeKeys:Stop()
+	end
 end
 
 -- Keys
@@ -430,6 +453,20 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		end
 	end
 end
+
+function Lockdown:TimerHandler_FreeKeys()
+	local old = bFreeingMouse
+	bFreeingMouse = ((self.settings.free_with_shift and Apollo.IsShiftKeyDown())
+		or (self.settings.free_with_ctrl and Apollo.IsControlKeyDown())
+		or (self.settings.free_with_alt and Apollo.IsAltKeyDown()))
+	if bFreeingMouse and GameLib.IsMouseLockOn() then
+		self:SuspendActionMode()
+	end
+	if old and not bFreeingMouse then
+		self:TimerHandler_FramePollPulse()
+	end
+end
+
 
 -- Targeting
 local uLastMouseover
