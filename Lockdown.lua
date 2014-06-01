@@ -17,6 +17,7 @@ local tAdditionalWindows = {
 	"VoteKick",
 	"VoteSurrender",
 	"AddonError",
+	"ResurrectDialog"
 }
 
 -- Add windows to ignore here
