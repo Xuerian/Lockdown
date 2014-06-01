@@ -24,6 +24,7 @@ local tAdditionalWindows = {
 local tIgnoreWindows = {
 	StoryPanelInformational = true,
 	StoryPanelBubble = true,
+	StoryPanelBubbleCenter = true,
 	ProcsIcon1 = true,
 	ProcsIcon2 = true,
 	ProcsIcon3 = true,
