@@ -54,6 +54,9 @@ local tDefaults = {
 	free_with_alt = false,
 	reticle_show = true,
 	reticle_target = true,
+	reticle_target_neutral = true,
+	reticle_target_hostile = true,
+	reticle_target_friendly = true,
 	reticle_target_delay = 0,
 }
 
@@ -327,6 +330,18 @@ function Lockdown:OnReticleTargetBtn(btn)
 	self.settings.reticle_target = btn:IsChecked()
 end
 
+function Lockdown:OnReticleTargetHostileBtn(btn)
+	self.settings.reticle_target_hostile = btn:IsChecked()
+end
+
+function Lockdown:OnReticleTargetFriendlyBtn(btn)
+	self.settings.reticle_target_friendly = btn:IsChecked()
+end
+
+function Lockdown:OnReticleTargetNeutralBtn(btn)
+	self.settings.reticle_target_neutral = btn:IsChecked()
+end
+
 function Lockdown:OnReticleShowBtn(btn)
 	self.settings.reticle_show = btn:IsChecked()
 end
@@ -361,6 +376,9 @@ function Lockdown:UpdateConfigUI()
 	self.tWnd.LockTargetModifierBtn:SetText(self.settings.locktarget_modifier and self.settings.locktarget_modifier or L.button_label_modifier)
 	self.tWnd.ReticleShowBtn:SetCheck(self.settings.reticle_show)
 	self.tWnd.ReticleTargetBtn:SetCheck(self.settings.reticle_target)
+	self.tWnd.ReticleTargetHostileBtn:SetCheck(self.settings.reticle_target_hostile)
+	self.tWnd.ReticleTargetFriendlyBtn:SetCheck(self.settings.reticle_target_friendly)
+	self.tWnd.ReticleTargetNeutralBtn:SetCheck(self.settings.reticle_target_neutral)
 	self.tWnd.TargetDelaySlider:SetValue(self.settings.reticle_target_delay)
 	self.tWnd.FreeWithShiftBtn:SetCheck(self.settings.free_with_shift)
 	self.tWnd.FreeWithCtrlBtn:SetCheck(self.settings.free_with_ctrl)
@@ -473,18 +491,22 @@ end
 -- Targeting
 local uLastMouseover
 function Lockdown:EventHandler_MouseOverUnitChanged(unit)
-	if unit and self.settings.reticle_target and GameLib.IsMouseLockOn() then
-		if unit ~= GameLib.GetTargetUnit() then
-			if not uLockedTarget or uLockedTarget:IsDead() then
-				if self.settings.reticle_target_delay ~= 0 then
+	local opt = self.settings
+	if unit and opt.reticle_target and GameLib.IsMouseLockOn() then
+		local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
+		if ((opt.reticle_target_friendly and disposition == 2)
+			or (opt.reticle_target_neutral and disposition == 1)
+			or (opt.reticle_target_hostile and disposition == 0)) then
+			if opt.reticle_target_delay ~= 0 then
+				if unit ~= GameLib.GetTargetUnit() then
 					uLastMouseover = unit
 					self.timerDelayedTarget:Start()
 				else
-					GameLib.SetTargetUnit(unit)
+					self.timerDelayedTarget:Stop()
 				end
+			else
+				GameLib.SetTargetUnit(unit)
 			end
-		elseif self.settings.reticle_target_delay ~= 0 then
-			self.timerDelayedTarget:Stop()
 		end
 	end
 end
