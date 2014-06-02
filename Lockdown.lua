@@ -492,7 +492,7 @@ end
 local uLastMouseover
 function Lockdown:EventHandler_MouseOverUnitChanged(unit)
 	local opt = self.settings
-	if unit and opt.reticle_target and GameLib.IsMouseLockOn() then
+	if unit and opt.reticle_target and GameLib.IsMouseLockOn() and (not uLockedTarget or uLockedTarget:IsDead()) then
 		local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
 		if ((opt.reticle_target_friendly and disposition == 2)
 			or (opt.reticle_target_neutral and disposition == 1)
