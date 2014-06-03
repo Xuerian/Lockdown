@@ -94,13 +94,23 @@ end
 
 -- Register a window update for a given event
 function Lockdown:AddWindowEventListener(sEvent, sName)
-	local sHandler = "EventHandler_"..sEvent
+	local sHandler = "AutoEventHandler_"..sEvent
 	Apollo.RegisterEventHandler(sEvent, sHandler, self)
 	self[sHandler] = function(self_)
 		local wnd = Apollo.FindWindowByName(sName)
 		if wnd then
 			self_:RegisterWindow(wnd)
 		end
+	end
+end
+
+local tDelayedWindows = {}
+function Lockdown:AddDelayedWindowEventListener(sEvent, sName)
+	local sHandler = "AutoEventHandler_"..sEvent
+	Apollo.RegisterEventHandler(sEvent, sHandler, self)
+	self[sHandler] = function(self_)
+		tDelayedWindows[sName] = true
+		Lockdown.timerDelayedFrameCatch:Start()
 	end
 end
 
@@ -160,6 +170,10 @@ function Lockdown:OnLoad()
 	-- Crawl for frames to hook
 	self.timerFrameCrawl = ApolloTimer.Create(5.0, false, "TimerHandler_FrameCrawl", self)
 
+	-- Wait for windows to be created or re-created
+	self.timerDelayedFrameCatch = ApolloTimer.Create(0.05, true, "TimerHandler_DelayedFrameCatch", self)
+	self.timerDelayedFrameCatch:Stop()
+
 	-- Poll frames for visibility.
 	-- I'd much rather use hooks or callbacks or events, but I can't hook, I can't find the right callbacks/they don't work, and the events aren't consistant or listed. 
 	-- You made me do this, Carbine.
@@ -175,6 +189,9 @@ function Lockdown:OnLoad()
 	-- Carbine, plz.
 	self:AddWindowEventListener("AbilityWindowHasBeenToggled", "AbilitiesBuilderForm")
 	self:AddWindowEventListener("GenericEvent_InitializeFriends", "SocialPanelForm")
+	self:AddDelayedWindowEventListener("GenericEvent_StartCraftingGrid", "CraftingGridForm")
+	self:AddDelayedWindowEventListener("InvokeSettlerBuild", "BuildMapForm")
+	self:AddDelayedWindowEventListener("ToggleMarketplaceWindow", "MarketplaceCommodityForm")
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
@@ -225,6 +242,19 @@ function Lockdown:TimerHandler_FrameCrawl()
 		end
 	end
 	self:SetActionMode(true)
+end
+
+function Lockdown:TimerHandler_DelayedFrameCatch()
+	for sName in pairs(tDelayedWindows) do
+		local wnd = Apollo.FindWindowByName(sName)
+		if wnd then
+			Lockdown:RegisterWindow(wnd)
+			tDelayedWindows[sName] = nil
+		end
+	end
+	if select("#", tDelayedWindows) == 0 then
+		self.timerDelayedFrameCatch:Stop()
+	end
 end
 
 function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
