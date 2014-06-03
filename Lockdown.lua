@@ -17,7 +17,7 @@ local tAdditionalWindows = {
 	"VoteKick",
 	"VoteSurrender",
 	"AddonError",
-	"ResurrectDialog"
+	"ResurrectDialog",
 }
 
 -- Add windows to ignore here
@@ -28,6 +28,7 @@ local tIgnoreWindows = {
 	ProcsIcon1 = true,
 	ProcsIcon2 = true,
 	ProcsIcon3 = true,
+	LootNotificationForm = true,
 }
 
 -- Localization
