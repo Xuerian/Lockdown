@@ -272,7 +272,7 @@ function Lockdown:TimerHandler_FramePollPulse()
 		-- Poll windows
 		for wnd in pairs(tPauseWindows) do
 			-- Unlock if visible and not currently skipped
-			if wnd:IsShown() then
+			if wnd:IsShown() and wnd:IsValid() then
 				if not tSkipWindows[wnd] then
 					bWindowUnlock = true
 				end
