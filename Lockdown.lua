@@ -6,6 +6,8 @@
 -- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful.
 
 -- Add windows that don't close on escape here
+-- Many Carbine windows must be caught via event handlers
+-- since they get recreated and handles go stale. 
 local tAdditionalWindows = {
 	"RoverForm",
 	"GeminiConsoleWindow",
@@ -35,8 +37,8 @@ local tIgnoreWindows = {
 local tLocalization = {
 	en_us = {
 		button_configure = "Lockdown",
-		button_label_bind = "Click to bind",
-		button_label_bind_wait = "Press key..",
+		button_label_bind = "Click to change",
+		button_label_bind_wait = "Press new key",
 		button_label_modifier = "Modifier"
 	}
 }
@@ -52,9 +54,9 @@ local tDefaults = {
 	locktarget_modifier = false,
 	free_with_shift = false,
 	free_with_ctrl = false,
-	free_with_alt = false,
+	free_with_alt = true,
 	reticle_show = true,
-	reticle_target = true,
+	reticle_target = false,
 	reticle_target_neutral = true,
 	reticle_target_hostile = true,
 	reticle_target_friendly = true,
@@ -105,6 +107,7 @@ function Lockdown:AddWindowEventListener(sEvent, sName)
 	end
 end
 
+-- Register a delayed window update for a given event
 local tDelayedWindows = {}
 function Lockdown:AddDelayedWindowEventListener(sEvent, sName)
 	local sHandler = "AutoEventHandler_"..sEvent
@@ -123,12 +126,14 @@ end
 
 function Lockdown:OnRestore(eLevel, tData)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account and tData then
+		-- Restore settings and initialize defaults
 		self.settings = tData
 		for k,v in pairs(tDefaults) do
 			if self.settings[k] == nil then
 				self.settings[k] = v
 			end
 		end
+		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
 		self.timerDelayedTarget:Set(self.settings.reticle_target_delay, false)
 	end
@@ -163,13 +168,13 @@ function Lockdown:OnLoad()
 	-- TODO: Only do this when settings.reticle_target is on
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
 	Apollo.RegisterEventHandler("TargetUnitChanged", "EventHandler_TargetUnitChanged", self)
-	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
+self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerRelock:Stop()
 	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
 	self.timerDelayedTarget:Stop()
 
 	-- Crawl for frames to hook
-	self.timerFrameCrawl = ApolloTimer.Create(5.0, false, "TimerHandler_FrameCrawl", self)
+	self.timerFrameCrawl = ApolloTimer.Create(4.0, false, "TimerHandler_FrameCrawl", self)
 
 	-- Wait for windows to be created or re-created
 	self.timerDelayedFrameCatch = ApolloTimer.Create(0.05, true, "TimerHandler_DelayedFrameCatch", self)
@@ -182,16 +187,24 @@ function Lockdown:OnLoad()
 	
 	-- Keybinds
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
-	self.timerFreeKeys = ApolloTimer.Create(0.05, true, "TimerHandler_FreeKeys", self)
+	self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
 
 	-- External windows
 	Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
 
-	-- Carbine, plz.
+	-- These windows are created or re-created and must be caught with event handlers
+	-- Abilities builder
 	self:AddWindowEventListener("AbilityWindowHasBeenToggled", "AbilitiesBuilderForm")
+	-- Social panel
 	self:AddWindowEventListener("GenericEvent_InitializeFriends", "SocialPanelForm")
+	-- Lore window
+	self:AddWindowEventListener("HudAlert_ToggleLoreWindow", "LoreWindowForm")
+	self:AddWindowEventListener("InterfaceMenu_ToggleLoreWindow", "LoreWindowForm")
+	-- Crafting grid
 	self:AddDelayedWindowEventListener("GenericEvent_StartCraftingGrid", "CraftingGridForm")
+	-- Settler building
 	self:AddDelayedWindowEventListener("InvokeSettlerBuild", "BuildMapForm")
+	-- Commodity marketplace
 	self:AddDelayedWindowEventListener("ToggleMarketplaceWindow", "MarketplaceCommodityForm")
 
 	-- Rainbows, unicorns, and kittens
@@ -227,6 +240,7 @@ function Lockdown:RegisterWindow(wnd)
 	return false
 end
 
+-- Discover simple unlocking frames
 function Lockdown:TimerHandler_FrameCrawl()
 	for _,strata in ipairs(Apollo.GetStrata()) do
 		for _,wnd in ipairs(Apollo.GetWindowsInStratum(strata)) do
@@ -245,6 +259,7 @@ function Lockdown:TimerHandler_FrameCrawl()
 	self:SetActionMode(true)
 end
 
+-- Wait for certain frames to be created or recreated after a event
 function Lockdown:TimerHandler_DelayedFrameCatch()
 	for sName in pairs(tDelayedWindows) do
 		local wnd = Apollo.FindWindowByName(sName)
@@ -258,6 +273,7 @@ function Lockdown:TimerHandler_DelayedFrameCatch()
 	end
 end
 
+-- API
 function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
 	Lockdown:RegisterWindow(wndHandle)
 end
@@ -283,6 +299,7 @@ function Lockdown:TimerHandler_FramePollPulse()
 		end
 
 		-- CSI(?) dialogs
+		-- TODO: Skip inconsequential CSI dialogs (QTEs)
 		if CSIsLib.GetActiveCSI() and not tSkipWindows.CSI then
 			bWindowUnlock = true
 		end
@@ -326,7 +343,7 @@ local function BindClick(btn, which)
 end
 
 -- Cycle modifier for a given modifier button
-local function ModifierClick(btn, which)
+local function ModifierClick(which)
 	local mod = Lockdown.settings[which]
 	if not mod then
 		mod = "shift"
@@ -341,20 +358,20 @@ local function ModifierClick(btn, which)
 end
 
 -- UI callbacks
-function Lockdown:OnToggleKeyBtn(btn)
-	BindClick(btn, "toggle_key")
+function Lockdown:OnToggleKeyBtn()
+	BindClick("toggle_key")
 end
 
-function Lockdown:OnToggleModifierBtn(btn)
-	ModifierClick(btn, "toggle_modifier")
+function Lockdown:OnToggleModifierBtn()
+	ModifierClick("toggle_modifier")
 end
 
-function Lockdown:OnLockTargetKeyBtn(btn)
-	BindClick(btn, "locktarget_key")
+function Lockdown:OnLockTargetKeyBtn()
+	BindClick("locktarget_key")
 end
 
-function Lockdown:OnLockTargetModifierBtn(btn)
-	ModifierClick(btn, "locktarget_modifier")
+function Lockdown:OnLockTargetModifierBtn()
+	ModifierClick("locktarget_modifier")
 end
 
 function Lockdown:OnReticleTargetBtn(btn)
@@ -505,6 +522,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	end
 end
 
+-- Watch for modifiers to pause mouselock
 function Lockdown:TimerHandler_FreeKeys()
 	local old = bFreeingMouse
 	bFreeingMouse = ((self.settings.free_with_shift and Apollo.IsShiftKeyDown())
