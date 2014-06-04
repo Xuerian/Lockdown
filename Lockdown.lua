@@ -177,7 +177,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerFrameCrawl = ApolloTimer.Create(4.0, false, "TimerHandler_FrameCrawl", self)
 
 	-- Wait for windows to be created or re-created
-	self.timerDelayedFrameCatch = ApolloTimer.Create(0.05, true, "TimerHandler_DelayedFrameCatch", self)
+	self.timerDelayedFrameCatch = ApolloTimer.Create(0.1, true, "TimerHandler_DelayedFrameCatch", self)
 	self.timerDelayedFrameCatch:Stop()
 
 	-- Poll frames for visibility.
