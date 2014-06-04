@@ -206,6 +206,12 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:AddDelayedWindowEventListener("InvokeSettlerBuild", "BuildMapForm")
 	-- Commodity marketplace
 	self:AddDelayedWindowEventListener("ToggleMarketplaceWindow", "MarketplaceCommodityForm")
+	-- Auctionhouse
+	self:AddDelayedWindowEventListener("ToggleAuctionWindow", "MarketplaceAuctionForm")
+	-- CREDD
+	self:AddDelayedWindowEventListener("ToggleCREDDExchangeWindow", "MarketplaceCREDDForm")
+	-- Runecrafting
+	self:AddDelayedWindowEventListener("GenericEvent_CraftingResume_OpenEngraving", "RunecraftingForm")
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
