@@ -364,8 +364,8 @@ local function ModifierClick(which)
 end
 
 -- UI callbacks
-function Lockdown:OnToggleKeyBtn()
-	BindClick("toggle_key")
+function Lockdown:OnToggleKeyBtn(btn)
+	BindClick(btn, "toggle_key")
 end
 
 function Lockdown:OnToggleModifierBtn()
@@ -373,7 +373,7 @@ function Lockdown:OnToggleModifierBtn()
 end
 
 function Lockdown:OnLockTargetKeyBtn()
-	BindClick("locktarget_key")
+	BindClick(btn, "locktarget_key")
 end
 
 function Lockdown:OnLockTargetModifierBtn()
