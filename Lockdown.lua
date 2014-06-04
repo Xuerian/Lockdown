@@ -20,6 +20,7 @@ local tAdditionalWindows = {
 	"VoteSurrender",
 	"AddonError",
 	"ResurrectDialog",
+	"ExitInstanceDialog"
 }
 
 -- Add windows to ignore here
@@ -212,6 +213,11 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:AddDelayedWindowEventListener("ToggleCREDDExchangeWindow", "MarketplaceCREDDForm")
 	-- Runecrafting
 	self:AddDelayedWindowEventListener("GenericEvent_CraftingResume_OpenEngraving", "RunecraftingForm")
+	-- Instance settings
+	self:AddDelayedWindowEventListener("ShowInstanceGameModeDialog", "InstanceSettingsForm")
+	self:AddDelayedWindowEventListener("ShowInstanceRestrictedDialog", "InstanceSettingsRestrictedForm")
+	-- Public event voting
+	self:AddDelayedWindowEventListener("PublicEventInitiateVote", "PublicEventVoteForm")
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
