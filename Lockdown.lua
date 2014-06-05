@@ -378,7 +378,7 @@ function Lockdown:OnToggleModifierBtn()
 	ModifierClick("toggle_modifier")
 end
 
-function Lockdown:OnLockTargetKeyBtn()
+function Lockdown:OnLockTargetKeyBtn(btn)
 	BindClick(btn, "locktarget_key")
 end
 
