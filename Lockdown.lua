@@ -288,7 +288,7 @@ function Lockdown:TimerHandler_FrameCrawl()
 	local pixel = Apollo.GetAddon("MouselockIndicatorPixel")
 	if pixel then
 		pixel.timer:Stop()
-		self.timerPixel = ApolloTimer.Create(0.1, true, "TimerHandler_PixelPulse", self)
+		self.timerPixel = ApolloTimer.Create(0.05, true, "TimerHandler_PixelPulse", self)
 		self.wndPixels = pixel.wndPixels
 	end
 end
@@ -521,10 +521,14 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	
 	-- Static hotkeys, F7 and F8
 	elseif iKey == 118 then
-		bDirtyLock = false
 		self:SetActionMode(true)
 	elseif iKey == 119 then
+		bDirtyLock = true
 		self:SetActionMode(false)
+	-- MouselockRebind centering resume
+	elseif iKey == 120 then
+		bDirtyLock = false
+		self:SetActionMode(true)
 
 	-- Toggle mode
 	elseif iKey == toggle_key and (not toggle_modifier or toggle_modifier()) then
