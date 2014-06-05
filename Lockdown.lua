@@ -149,6 +149,7 @@ local function children_by_name(wnd, t)
 	return t
 end
 
+local green, blue, black = CColor.new(0, 1, 0, 1), CColor.new(0, 0, 1, 1), CColor.new(0, 0, 0, 1)
 function Lockdown:OnLoad()
 	-- Load reticle
 	self.xml = XmlDoc.CreateFromFile("Lockdown.xml")
@@ -224,6 +225,20 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:KeyOrModifierUpdated()
 end
 
+local bDirtyLock = true
+function Lockdown:TimerHandler_PixelPulse()
+	if GameLib.IsMouseLockOn() then
+		if bDirtyLock then
+			self.wndPixels:SetBGColor(blue)
+		else
+			self.wndPixels:SetBGColor(green)
+		end
+	else
+		bDirtyLock = true
+		self.wndPixels:SetBGColor(black)
+	end
+end
+
 function Lockdown:TimerHandler_InitialLock()
 	if self.bActiveIntent then
 		GameLib:SetMouseLock(false)
@@ -268,7 +283,14 @@ function Lockdown:TimerHandler_FrameCrawl()
 			Lockdown:RegisterWindow(wnd)
 		end
 	end
-	self:SetActionMode(true)
+	
+	-- Take over MouselockIndicatorPixel
+	local pixel = Apollo.GetAddon("MouselockIndicatorPixel")
+	if pixel then
+		pixel.timer:Stop()
+		self.timerPixel = ApolloTimer.Create(0.1, true, "TimerHandler_PixelPulse", self)
+		self.wndPixels = pixel.wndPixels
+	end
 end
 
 -- Wait for certain frames to be created or recreated after a event
@@ -499,6 +521,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	
 	-- Static hotkeys, F7 and F8
 	elseif iKey == 118 then
+		bDirtyLock = false
 		self:SetActionMode(true)
 	elseif iKey == 119 then
 		self:SetActionMode(false)
@@ -607,7 +630,7 @@ function Lockdown:Reticle_UpdatePosition()
 	local nRetW, nRetH = 32, 32
 
 	local tSize = Apollo.GetDisplaySize()
-	local nMidW, nMidH = tSize.nWidth/2, tSize.nHeight/2
+	local nMidW, nMidH = tSize.nWidth/2, tSize.nHeight/2 - 50
 
 	self.wndReticle:SetAnchorOffsets(nMidW - nRetW/2, nMidH - nRetH/2, nMidW + nRetW/2, nMidH + nRetH/2)
 	self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget"):SetOpacity(0.3)
