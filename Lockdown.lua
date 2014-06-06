@@ -177,6 +177,9 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Crawl for frames to hook
 	self.timerFrameCrawl = ApolloTimer.Create(4.0, false, "TimerHandler_FrameCrawl", self)
 
+	-- Hook MouselockIndicatorPixel
+	self.timerPixelHook = ApolloTimer.Create(1, true, "TimerHandler_PixelHook", self)
+
 	-- Wait for windows to be created or re-created
 	self.timerDelayedFrameCatch = ApolloTimer.Create(0.1, true, "TimerHandler_DelayedFrameCatch", self)
 	self.timerDelayedFrameCatch:Stop()
@@ -222,6 +225,19 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
 	self:KeyOrModifierUpdated()
+
+end
+
+-- Take over MouselockIndicatorPixel to show dirty lock status
+function Lockdown:TimerHandler_PixelHook()
+	-- Take over MouselockIndicatorPixel
+	local pixel = Apollo.GetAddon("MouselockIndicatorPixel")
+	if pixel and pixel.timer and not self.wndPixels then
+		pixel.timer:Stop()
+		self.timerPixel = ApolloTimer.Create(0.05, true, "TimerHandler_PixelPulse", self)
+		self.wndPixels = pixel.wndPixels
+		self.timerPixelHook:Stop()
+	end
 end
 
 local bDirtyLock = true
@@ -282,14 +298,6 @@ function Lockdown:TimerHandler_FrameCrawl()
 		if wnd then
 			Lockdown:RegisterWindow(wnd)
 		end
-	end
-	
-	-- Take over MouselockIndicatorPixel
-	local pixel = Apollo.GetAddon("MouselockIndicatorPixel")
-	if pixel then
-		pixel.timer:Stop()
-		self.timerPixel = ApolloTimer.Create(0.05, true, "TimerHandler_PixelPulse", self)
-		self.wndPixels = pixel.wndPixels
 	end
 end
 
