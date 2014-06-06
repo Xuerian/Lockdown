@@ -178,7 +178,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerFrameCrawl = ApolloTimer.Create(4.0, false, "TimerHandler_FrameCrawl", self)
 
 	-- Hook MouselockIndicatorPixel
-	self.timerPixelHook = ApolloTimer.Create(1, true, "TimerHandler_PixelHook", self)
+	self.timerPixelHook = ApolloTimer.Create(1, false, "TimerHandler_PixelHook", self)
 
 	-- Wait for windows to be created or re-created
 	self.timerDelayedFrameCatch = ApolloTimer.Create(0.1, true, "TimerHandler_DelayedFrameCatch", self)
@@ -235,7 +235,6 @@ function Lockdown:TimerHandler_PixelHook()
 		pixel.timer:Stop()
 		self.timerPixel = ApolloTimer.Create(0.05, true, "TimerHandler_PixelPulse", self)
 		self.wndPixels = pixel.wndPixels
-		self.timerPixelHook:Stop()
 	end
 end
 
