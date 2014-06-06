@@ -149,7 +149,6 @@ local function children_by_name(wnd, t)
 	return t
 end
 
-local green, blue, black = CColor.new(0, 1, 0, 1), CColor.new(0, 0, 1, 1), CColor.new(0, 0, 0, 1)
 function Lockdown:OnLoad()
 	-- Load reticle
 	self.xml = XmlDoc.CreateFromFile("Lockdown.xml")
@@ -226,6 +225,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 end
 
 local bDirtyLock = true
+local green, blue, black = CColor.new(0, 1, 0, 1), CColor.new(0, 0, 1, 1), CColor.new(0, 0, 0, 1)
 function Lockdown:TimerHandler_PixelPulse()
 	if GameLib.IsMouseLockOn() then
 		if bDirtyLock then
