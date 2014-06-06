@@ -230,8 +230,7 @@ end
 
 -- Take over MouselockIndicatorPixel to show dirty lock status
 function Lockdown:TimerHandler_PixelHook()
-	-- Take over MouselockIndicatorPixel
-	local pixel = Apollo.GetAddon("MouselockIndicatorPixel")
+	local pixel = Apollo.GetAddon("MouselockIndicatorPixel") or Apollo.GetAddon("MouselockRebind")
 	if pixel and pixel.timer and not self.wndPixels then
 		pixel.timer:Stop()
 		self.timerPixel = ApolloTimer.Create(0.05, true, "TimerHandler_PixelPulse", self)
