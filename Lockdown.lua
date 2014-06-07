@@ -1,3 +1,6 @@
+local ReticleOffset_Y = -100
+local ReticleOffset_X = 0
+
 -- Carbine, full rights if you want to use any of it.
 
 -- Addon authors or Carbine, to add a window to the list of pausing windows, call this for normal windows
@@ -640,7 +643,7 @@ function Lockdown:Reticle_UpdatePosition()
 	local nRetW, nRetH = 32, 32
 
 	local tSize = Apollo.GetDisplaySize()
-	local nMidW, nMidH = tSize.nWidth/2, tSize.nHeight/2 - 50
+	local nMidW, nMidH = tSize.nWidth/2 + ReticleOffset_X, tSize.nHeight/2 + ReticleOffset_Y
 
 	self.wndReticle:SetAnchorOffsets(nMidW - nRetW/2, nMidH - nRetH/2, nMidW + nRetW/2, nMidH + nRetH/2)
 	self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget"):SetOpacity(0.3)
