@@ -461,19 +461,20 @@ end
 
 -- Update all text in config window
 function Lockdown:UpdateConfigUI()
-	self.tWnd.ToggleKeyBtn:SetText(L.button_label_bind)
-	self.tWnd.LockTargetKeyBtn:SetText(L.button_label_bind)
-	self.tWnd.ToggleModifierBtn:SetText(self.settings.toggle_modifier and self.settings.toggle_modifier or L.button_label_modifier)
-	self.tWnd.LockTargetModifierBtn:SetText(self.settings.locktarget_modifier and self.settings.locktarget_modifier or L.button_label_modifier)
-	self.tWnd.ReticleShowBtn:SetCheck(self.settings.reticle_show)
-	self.tWnd.ReticleTargetBtn:SetCheck(self.settings.reticle_target)
-	self.tWnd.ReticleTargetHostileBtn:SetCheck(self.settings.reticle_target_hostile)
-	self.tWnd.ReticleTargetFriendlyBtn:SetCheck(self.settings.reticle_target_friendly)
-	self.tWnd.ReticleTargetNeutralBtn:SetCheck(self.settings.reticle_target_neutral)
-	self.tWnd.TargetDelaySlider:SetValue(self.settings.reticle_target_delay)
-	self.tWnd.FreeWithShiftBtn:SetCheck(self.settings.free_with_shift)
-	self.tWnd.FreeWithCtrlBtn:SetCheck(self.settings.free_with_ctrl)
-	self.tWnd.FreeWithAltBtn:SetCheck(self.settings.free_with_alt)	
+	local w, s = self.tWnd, self.settings
+	w.ToggleKeyBtn:SetText(L.button_label_bind)
+	w.LockTargetKeyBtn:SetText(L.button_label_bind)
+	w.ToggleModifierBtn:SetText(s.toggle_modifier and s.toggle_modifier or L.button_label_modifier)
+	w.LockTargetModifierBtn:SetText(s.locktarget_modifier and s.locktarget_modifier or L.button_label_modifier)
+	w.ReticleShowBtn:SetCheck(s.reticle_show)
+	w.ReticleTargetBtn:SetCheck(s.reticle_target)
+	w.ReticleTargetHostileBtn:SetCheck(s.reticle_target_hostile)
+	w.ReticleTargetFriendlyBtn:SetCheck(s.reticle_target_friendly)
+	w.ReticleTargetNeutralBtn:SetCheck(s.reticle_target_neutral)
+	w.TargetDelaySlider:SetValue(s.reticle_target_delay)
+	w.FreeWithShiftBtn:SetCheck(s.free_with_shift)
+	w.FreeWithCtrlBtn:SetCheck(s.free_with_ctrl)
+	w.FreeWithAltBtn:SetCheck(s.free_with_alt)
 end
 
 function Lockdown:OnCloseButton()
