@@ -80,11 +80,6 @@ local function print(...)
 	Print(table.concat(out, ", "))
 end
 
--- Print without debug
-local function chatprint(text)
-	ChatSystemLib.PostOnChannel(2, text)
-end
-
 -- Wipe a table for reuse
 local function wipe(t)
 	for k,v in pairs(t) do
