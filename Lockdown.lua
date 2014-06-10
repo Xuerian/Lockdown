@@ -45,31 +45,26 @@ local tLocalization = {
 }
 local L = setmetatable({}, {__index = tLocalization.en_us})
 
--- Addon init and variables
-local Lockdown = {}
-
-local tDefaults = {
-	toggle_key = 192, -- backquote
-	toggle_modifier = false,
-	locktarget_key = 20, -- caps lock
-	locktarget_modifier = false,
-	free_with_shift = false,
-	free_with_ctrl = false,
-	free_with_alt = true,
-	reticle_show = true,
-	reticle_offset_y = -100,
-	reticle_offset_x = 0,
-	reticle_target = false,
-	reticle_target_neutral = true,
-	reticle_target_hostile = true,
-	reticle_target_friendly = true,
-	reticle_target_delay = 0,
+-- Defaults
+local Lockdown = {
+	settings = {
+		toggle_key = 192, -- backquote
+		toggle_modifier = false,
+		locktarget_key = 20, -- caps lock
+		locktarget_modifier = false,
+		free_with_shift = false,
+		free_with_ctrl = false,
+		free_with_alt = true,
+		reticle_show = true,
+		reticle_offset_y = -100,
+		reticle_offset_x = 0,
+		reticle_target = false,
+		reticle_target_neutral = true,
+		reticle_target_hostile = true,
+		reticle_target_friendly = true,
+		reticle_target_delay = 0,
+	}
 }
-
-Lockdown.settings = {}
-for k,v in pairs(tDefaults) do
-	Lockdown.settings[k] = v
-end
 
 -- Helpers
 local function print(...)
@@ -125,11 +120,8 @@ end
 function Lockdown:OnRestore(eLevel, tData)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account and tData then
 		-- Restore settings and initialize defaults
-		self.settings = tData
-		for k,v in pairs(tDefaults) do
-			if self.settings[k] == nil then
-				self.settings[k] = v
-			end
+		for k,v in pairs(tData) do
+			self.settings[k] = v
 		end
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
