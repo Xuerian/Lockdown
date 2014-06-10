@@ -1,4 +1,4 @@
 LockDown
 ==========
 
-Minimal Wildstar Combat Mode addon
+Automatic combat mode addon
