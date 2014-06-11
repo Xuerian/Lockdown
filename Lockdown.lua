@@ -58,6 +58,8 @@ local Lockdown = {
 		toggle_modifier = false,
 		locktarget_key = 20, -- caps lock
 		locktarget_modifier = false,
+		targetmouseover_key = 84, -- t
+		targetmouseover_modifier = "control",
 		free_with_shift = false,
 		free_with_ctrl = false,
 		free_with_alt = true,
@@ -409,6 +411,15 @@ function Lockdown:OnLockTargetModifierBtn()
 	ModifierClick("locktarget_modifier")
 end
 
+function Lockdown:BtnTargetMouseoverKey(btn)
+	BindClick(btn, "targetmouseover_key")
+end
+
+function Lockdown:BtnTargetMouseoverMod()
+	ModifierClick("targetmouseover_modifier")
+end
+
+
 function Lockdown:OnReticleTargetBtn(btn)
 	self.settings.reticle_target = btn:IsChecked()
 end
@@ -468,8 +479,10 @@ function Lockdown:UpdateConfigUI()
 	local w, s = self.tWnd, self.settings
 	w.ToggleKeyBtn:SetText(SystemKeyMap[s.toggle_key])
 	w.LockTargetKeyBtn:SetText(SystemKeyMap[s.locktarget_key])
+	w.BtnTargetMouseoverKey:SetText(SystemKeyMap[s.targetmouseover_key])
 	w.ToggleModifierBtn:SetText(s.toggle_modifier and s.toggle_modifier or L.button_label_modifier)
 	w.LockTargetModifierBtn:SetText(s.locktarget_modifier and s.locktarget_modifier or L.button_label_modifier)
+	w.BtnTargetMouseoverMod:SetText(s.targetmouseover_modifier and s.targetmouseover_modifier or L.button_label_modifier)
 	w.ReticleShowBtn:SetCheck(s.reticle_show)
 	w.ReticleTargetBtn:SetCheck(s.reticle_target)
 	w.ReticleTargetHostileBtn:SetCheck(s.reticle_target_hostile)
@@ -490,7 +503,7 @@ function Lockdown:OnCloseButton()
 end
 
 -- Store key and modifier check function
-local toggle_key, toggle_modifier, locktarget_key, locktarget_modifier
+local toggle_key, toggle_modifier, locktarget_key, locktarget_modifier, targetmousover_key, targetmouseover_modifier
 local function Upvalues(whichkey, whichmod)
 	local mod = Lockdown.settings[whichmod]
 	if mod == "shift" then
@@ -506,6 +519,7 @@ end
 function Lockdown:KeyOrModifierUpdated()
 	toggle_key, toggle_modifier = Upvalues("toggle_key", "toggle_modifier")
 	locktarget_key, locktarget_modifier = Upvalues("locktarget_key", "locktarget_modifier")
+	targetmouseover_key, targetmouseover_modifier = Upvalues("targetmouseover_key", "targetmouseover_modifier")
 	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
 		self.timerFreeKeys:Start()
 	else
@@ -547,6 +561,10 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	elseif iKey == 120 then
 		bDirtyLock = false
 		self:SetActionMode(true)
+
+	-- Target mouseover
+	elseif iKey == targetmouseover_key and (not targetmouseover_modifier or targetmouseover_modifier()) then
+		GameLib.SetTargetUnit(GetMouseOverUnit())
 
 	-- Toggle mode
 	elseif iKey == toggle_key and (not toggle_modifier or toggle_modifier()) then
