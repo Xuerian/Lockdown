@@ -20,7 +20,8 @@ local tAdditionalWindows = {
 	"VoteSurrender",
 	"AddonError",
 	"ResurrectDialog",
-	"ExitInstanceDialog"
+	"ExitInstanceDialog",
+	"GuildDesignerForm",
 }
 
 -- Add windows to ignore here
@@ -201,6 +202,11 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Lore window
 	self:AddWindowEventListener("HudAlert_ToggleLoreWindow", "LoreWindowForm")
 	self:AddWindowEventListener("InterfaceMenu_ToggleLoreWindow", "LoreWindowForm")
+	-- Guild windows
+	self:AddDelayedWindowEventListener("GuildBankerOpen", "GuildBankForm")
+	self:AddDelayedWindowEventListener("Guild_ToggleInfo", "GuildInfoForm")
+	self:AddDelayedWindowEventListener("Guild_TogglePerks", "GuildPerksForm")
+	self:AddDelayedWindowEventListener("Guild_ToggleRoster", "GuildRosterForm")
 	-- Crafting grid
 	self:AddDelayedWindowEventListener("GenericEvent_StartCraftingGrid", "CraftingGridForm")
 	-- Settler building
