@@ -46,6 +46,11 @@ local tLocalization = {
 }
 local L = setmetatable({}, {__index = tLocalization.en_us})
 
+-- System key map
+-- I don't even know who this is from
+-- Three different mods have three different versions
+local SystemKeyMap
+
 -- Defaults
 local Lockdown = {
 	settings = {
@@ -461,8 +466,8 @@ end
 -- Update all text in config window
 function Lockdown:UpdateConfigUI()
 	local w, s = self.tWnd, self.settings
-	w.ToggleKeyBtn:SetText(L.button_label_bind)
-	w.LockTargetKeyBtn:SetText(L.button_label_bind)
+	w.ToggleKeyBtn:SetText(SystemKeyMap[s.toggle_key])
+	w.LockTargetKeyBtn:SetText(SystemKeyMap[s.locktarget_key])
 	w.ToggleModifierBtn:SetText(s.toggle_modifier and s.toggle_modifier or L.button_label_modifier)
 	w.LockTargetModifierBtn:SetText(s.locktarget_modifier and s.locktarget_modifier or L.button_label_modifier)
 	w.ReticleShowBtn:SetCheck(s.reticle_show)
@@ -654,3 +659,102 @@ function Lockdown:Reticle_UpdatePosition()
 end
 
 Lockdown:Init()
+
+-- I don't want this at the top.
+SystemKeyMap = {
+	[8] = "Backspace",
+	[9] = "Tab",
+	[13] = "Enter",
+	[16] = "Shift",
+	[17] = "Ctrl",
+	[19] = "Pause Break",
+	[20] = "Caps Lock",
+	[27] = "Esc",
+	[32] = "Space",
+	[33] = "Page Up",
+	[34] = "Page Down",
+	[35] = "End",
+	[36] = "Home",
+	[37] = "Left",
+	[38] = "Up",
+	[39] = "Right",
+	[40] = "Down",
+	[45] = "Insert",
+	[46] = "Delete",
+	[48] = "0",
+	[49] = "1",
+	[50] = "2",
+	[51] = "3",
+	[52] = "4",
+	[53] = "5",
+	[54] = "6",
+	[55] = "7",
+	[56] = "8",
+	[57] = "9",
+	[65] = "A",
+	[66] = "B",
+	[67] = "C",
+	[68] = "D",
+	[69] = "E",
+	[70] = "F",
+	[71] = "G",
+	[72] = "H",
+	[73] = "I",
+	[74] = "J",
+	[75] = "K",
+	[76] = "L",
+	[77] = "M",
+	[78] = "N",
+	[79] = "O",
+	[80] = "P",
+	[81] = "Q",
+	[82] = "R",
+	[83] = "S",
+	[84] = "T",
+	[85] = "U",
+	[86] = "V",
+	[87] = "W",
+	[88] = "X",
+	[89] = "Y",
+	[90] = "Z",
+	[96] = "Num 0",
+	[97] = "Num 1",
+	[98] = "Num 2",
+	[99] = "Num 3",
+	[100] = "Num 4",
+	[101] = "Num 5",
+	[102] = "Num 6",
+	[103] = "Num 7",
+	[104] = "Num 8",
+	[105] = "Num 9",
+	[106] = "Num *",
+	[107] = "Num +",
+	[109] = "Num -",
+	[110] = "Num .",
+	[111] = "Num /",
+	[112] = "F1",
+	[113] = "F2",
+	[114] = "F3",
+	[115] = "F4",
+	[116] = "F5",
+	[117] = "F6",
+	[118] = "F7",
+	[119] = "F8",
+	[120] = "F9",
+	[121] = "F10",
+	[122] = "F11",
+	[123] = "F12",
+	[144] = "Num Lock",
+	[145] = "Scroll Lock",
+	[186] = ";",
+	[187] = "=",
+	[188] = ",",
+	[189] = "-",
+	[190] = ".",
+	[191] = "/",
+	[192] = "`",
+	[219] = "[",
+	[220] = [[\]],
+	[221] = "]",
+	[222] = "'"
+}
