@@ -32,6 +32,7 @@ local tIgnoreWindows = {
 	ProcsIcon2 = true,
 	ProcsIcon3 = true,
 	LootNotificationForm = true,
+	ClairvoyanceNotification = true,
 }
 
 -- Localization
