@@ -211,6 +211,8 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:AddDelayedWindowEventListener("GenericEvent_StartCraftingGrid", "CraftingGridForm")
 	-- Runecrafting
 	self:AddDelayedWindowEventListener("GenericEvent_CraftingResume_OpenEngraving", "RunecraftingForm")
+	-- Tradeskill trainer
+	self:AddDelayedWindowEventListener("InvokeTradeskillTrainerWindow", "TradeskillTrainerForm")
 	-- Settler building
 	self:AddDelayedWindowEventListener("InvokeSettlerBuild", "BuildMapForm")
 	-- Commodity marketplace
