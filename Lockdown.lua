@@ -209,6 +209,8 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:AddDelayedWindowEventListener("Guild_ToggleRoster", "GuildRosterForm")
 	-- Crafting grid
 	self:AddDelayedWindowEventListener("GenericEvent_StartCraftingGrid", "CraftingGridForm")
+	-- Runecrafting
+	self:AddDelayedWindowEventListener("GenericEvent_CraftingResume_OpenEngraving", "RunecraftingForm")
 	-- Settler building
 	self:AddDelayedWindowEventListener("InvokeSettlerBuild", "BuildMapForm")
 	-- Commodity marketplace
@@ -217,8 +219,6 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:AddDelayedWindowEventListener("ToggleAuctionWindow", "MarketplaceAuctionForm")
 	-- CREDD
 	self:AddDelayedWindowEventListener("ToggleCREDDExchangeWindow", "MarketplaceCREDDForm")
-	-- Runecrafting
-	self:AddDelayedWindowEventListener("GenericEvent_CraftingResume_OpenEngraving", "RunecraftingForm")
 	-- Instance settings
 	self:AddDelayedWindowEventListener("ShowInstanceGameModeDialog", "InstanceSettingsForm")
 	self:AddDelayedWindowEventListener("ShowInstanceRestrictedDialog", "InstanceSettingsRestrictedForm")
@@ -307,7 +307,7 @@ function Lockdown:TimerHandler_DelayedFrameCatch()
 	for sName in pairs(tDelayedWindows) do
 		local wnd = Apollo.FindWindowByName(sName)
 		if wnd then
-			Lockdown:RegisterWindow(wnd)
+			self:RegisterWindow(wnd)
 			tDelayedWindows[sName] = nil
 		end
 	end
@@ -318,7 +318,7 @@ end
 
 -- API
 function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
-	Lockdown:RegisterWindow(wndHandle)
+	self:RegisterWindow(wndHandle)
 end
 
 -- Poll unlocking frames
