@@ -171,6 +171,8 @@ function Lockdown:OnLoad()
 	self.wndOptions = Apollo.LoadForm("Lockdown.xml", "Lockdown_OptionsForm", nil, self)
 	self.tWnd = children_by_name(self.wndOptions)
 
+	self.xml = nil
+
 	-- Targeting
 	-- TODO: Only do this when settings.reticle_target is on
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
