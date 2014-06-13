@@ -378,7 +378,9 @@ function Lockdown:TimerHandler_HotPulse()
 end
 
 function Lockdown:PollAllWindows()
-	return self:TimerHandler_ColdPulse() or self:TimerHandler_HotPulse()
+	self:TimerHandler_ColdPulse()
+	self:TimerHandler_HotPulse()
+	return bColdSuspend or bHotSuspend
 end
 
 function Lockdown:TimerHandler_Relock()
