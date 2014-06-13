@@ -175,9 +175,6 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Crawl for frames to hook
 	self.timerFrameCrawl = ApolloTimer.Create(4.0, false, "TimerHandler_FrameCrawl", self)
 
-	-- Hook MouselockIndicatorPixel
-	self.timerPixelHook = ApolloTimer.Create(1, false, "TimerHandler_PixelHook", self)
-
 	-- Wait for windows to be created or re-created
 	self.timerDelayedFrameCatch = ApolloTimer.Create(0.1, true, "TimerHandler_DelayedFrameCatch", self)
 	self.timerDelayedFrameCatch:Stop()
@@ -240,28 +237,6 @@ function Lockdown:TimerHandler_PixelHook()
 		pixel.timer:Stop()
 		self.timerPixel = ApolloTimer.Create(0.05, true, "TimerHandler_PixelPulse", self)
 		self.wndPixels = pixel.wndPixels
-	end
-end
-
-local bDirtyLock = true
-local green, blue, black = CColor.new(0, 1, 0, 1), CColor.new(0, 0, 1, 1), CColor.new(0, 0, 0, 1)
-function Lockdown:TimerHandler_PixelPulse()
-	if GameLib.IsMouseLockOn() then
-		if bDirtyLock then
-			self.wndPixels:SetBGColor(blue)
-		else
-			self.wndPixels:SetBGColor(green)
-		end
-	else
-		bDirtyLock = true
-		self.wndPixels:SetBGColor(black)
-	end
-end
-
-function Lockdown:TimerHandler_InitialLock()
-	if self.bActiveIntent then
-		GameLib:SetMouseLock(false)
-		GameLib:SetMouseLock(true)
 	end
 end
 
@@ -559,17 +534,6 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 			end
 		end
 	
-	-- Static hotkeys, F7 and F8
-	elseif iKey == 118 then
-		self:SetActionMode(true)
-	elseif iKey == 119 then
-		bDirtyLock = true
-		self:SetActionMode(false)
-	-- MouselockRebind centering resume
-	elseif iKey == 120 then
-		bDirtyLock = false
-		self:SetActionMode(true)
-
 	-- Target mouseover
 	elseif iKey == targetmouseover_key and (not targetmouseover_modifier or targetmouseover_modifier()) then
 		GameLib.SetTargetUnit(GetMouseOverUnit())
