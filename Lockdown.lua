@@ -307,10 +307,8 @@ function Lockdown:TimerHandler_DelayedFrameCatch()
 			tDelayedWindows[sName] = nil
 		end
 	end
-	if select("#", tDelayedWindows) == 0 then
 		self.timerDelayedFrameCatch:Stop()
 	end
-end
 
 -- API
 function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
