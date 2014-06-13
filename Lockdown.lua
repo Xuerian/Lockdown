@@ -36,6 +36,14 @@ local tIgnoreWindows = {
 	ClairvoyanceNotification = true,
 }
 
+-- Add windows to be checked at a high rate here
+local tHotList = {
+	SpaceStashInventoryForm = true,
+	ProgressLogForm = true,
+	QuestWindow = true,
+	ZoneMapFrame = true,
+}
+
 -- Localization
 local tLocalization = {
 	en_us = {
@@ -182,7 +190,8 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Poll frames for visibility.
 	-- I'd much rather use hooks or callbacks or events, but I can't hook, I can't find the right callbacks/they don't work, and the events aren't consistant or listed. 
 	-- You made me do this, Carbine.
-	self.timerFramePollPulse = ApolloTimer.Create(0.5, true, "TimerHandler_FramePollPulse", self)
+	self.timerColdPulse = ApolloTimer.Create(1.0, true, "TimerHandler_ColdPulse", self)
+	self.timerHotPulse = ApolloTimer.Create(0.2, true, "TimerHandler_HotPulse", self)
 	
 	-- Keybinds
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
@@ -241,20 +250,22 @@ function Lockdown:TimerHandler_PixelHook()
 end
 
 -- Disover frames we should pause for
-local tPauseWindows = {}
+local tColdWindows, tHotWindows, tWindows = {}, {}, {}
 function Lockdown:RegisterWindow(wnd)
 	if wnd then
 		local sName = wnd:GetName()
 		if not tIgnoreWindows[sName] then
-			-- Remove any old handles
-			for k,v in pairs(tPauseWindows) do
-				if v == sName then
-					tPauseWindows[sName] = nil
+			-- Add to window index
+			if not tWindows[sName] then
+				tWindows[sName] = tHotList[sName] and "hot" or "cold"
 				end
+
+			-- Add or update handle
+			if tWindows[sName] == "hot" then
+				tHotWindows[sName] = wnd
+			else
+				tColdWindows[sName] = wnd
 			end
-			-- Add new handle
-			tPauseWindows[wnd] = sName
-			-- print(sName)
 			return true
 		end
 	end
@@ -299,14 +310,16 @@ function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
 end
 
 -- Poll unlocking frames
-local bWindowUnlock = false
 local bFreeingMouse = false -- User freeing mouse with a modifier key
 local tSkipWindows = {}
-function Lockdown:TimerHandler_FramePollPulse()
-	bWindowUnlock = false
+local bColdSuspend, bHotSuspend = false, false
+
+local function pulse_core(self, t, csi)
+	local bWindowUnlock = false
 	if not bFreeingMouse then
+		local tSkipWindows = tSkipWindows
 		-- Poll windows
-		for wnd in pairs(tPauseWindows) do
+		for _, wnd in pairs(t) do
 			-- Unlock if visible and not currently skipped
 			if wnd:IsShown() and wnd:IsValid() then
 				if not tSkipWindows[wnd] then
@@ -320,20 +333,52 @@ function Lockdown:TimerHandler_FramePollPulse()
 
 		-- CSI(?) dialogs
 		-- TODO: Skip inconsequential CSI dialogs (QTEs)
-		if CSIsLib.GetActiveCSI() and not tSkipWindows.CSI then
+		if csi and CSIsLib.GetActiveCSI() and not tSkipWindows.CSI then
 			bWindowUnlock = true
-		end
-
-		-- Update state 
-		if bWindowUnlock then
-			self:SuspendActionMode()
-
-		elseif self.bActiveIntent and not GameLib.IsMouseLockOn() then
-			self:SetActionMode(true)
 		end
 	end
 
 	return bWindowUnlock
+end
+
+function Lockdown:TimerHandler_ColdPulse()
+	if not bHotSuspend then
+		if pulse_core(self, tColdWindows, true) then
+			if not bColdSuspend then
+				bColdSuspend = true
+				self:SuspendActionMode()
+				print("Cold suspend")
+			end
+		elseif bColdSuspend then
+			if self.bActiveIntent and not GameLib.IsMouseLockOn() and bColdSuspend and not pulse_core(self, tHotWindows) then
+				bColdSuspend = false
+				self:SetActionMode(true)
+				print("Cold resume")
+			end
+		end
+	end
+end
+
+function Lockdown:TimerHandler_HotPulse()
+	if not bColdSuspend then
+		if pulse_core(self, tHotWindows) then
+			if not bHotSuspend then
+				bHotSuspend = true
+				self:SuspendActionMode()
+				print("Hot suspend")
+			end
+		elseif bHotSuspend then
+			if self.bActiveIntent and not GameLib.IsMouseLockOn() and bHotSuspend and not pulse_core(self, tColdWindows, true) then
+				bHotSuspend = false
+				self:SetActionMode(true)
+				print("Hot resume")
+			end
+		end
+	end
+end
+
+function Lockdown:PollAllWindows()
+	return self:TimerHandler_ColdPulse() or self:TimerHandler_HotPulse()
 end
 
 function Lockdown:TimerHandler_Relock()
@@ -525,7 +570,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Open options on Escape
 	-- TODO: don't reset cursor position when a blocking window is still open
 	if iKey == 27 and self.bActiveIntent then
-		if not self:TimerHandler_FramePollPulse() then
+		if not self:PollAllWindows() then
 			if GameLib.GetTargetUnit() then
 				GameLib.SetTargetUnit()
 				self.timerRelock:Start()
@@ -543,11 +588,18 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		-- Save currently active windows and resume
 		if self.bActiveIntent and not GameLib.IsMouseLockOn() then
 			wipe(tSkipWindows)
-			for wnd in pairs(tPauseWindows) do
+
+			for _,wnd in pairs(tColdWindows) do
 				if wnd:IsShown() then
 					tSkipWindows[wnd] = true
 				end
 			end
+			for _,wnd in pairs(tHotWindows) do
+				if wnd:IsShown() then
+					tSkipWindows[wnd] = true
+				end
+			end
+
 			if CSIsLib.GetActiveCSI() then
 				tSkipWindows.CSI = true
 			end
@@ -578,8 +630,8 @@ function Lockdown:TimerHandler_FreeKeys()
 	if bFreeingMouse and GameLib.IsMouseLockOn() then
 		self:SuspendActionMode()
 	end
-	if old and not bFreeingMouse then
-		self:TimerHandler_FramePollPulse()
+	if old and not bFreeingMouse and not self:PollAllWindows() then
+		self:SetActionMode(true)
 	end
 end
 
@@ -620,6 +672,10 @@ function Lockdown:SetActionMode(bState)
 	self.bActiveIntent = bState
 	if GameLib.IsMouseLockOn() ~= bState then
 		GameLib.SetMouseLock(bState)
+	end
+	if not bState then
+		bHotSuspend = false
+		bColdSuspend = false
 	end
 	self.wndReticle:Show(bState and self.settings.reticle_show)
 	-- TODO: Sounds
