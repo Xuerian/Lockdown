@@ -22,6 +22,7 @@ local tAdditionalWindows = {
 	"ResurrectDialog",
 	"ExitInstanceDialog",
 	"GuildDesignerForm",
+	"SupplySachelForm"
 }
 
 -- Add windows to ignore here
