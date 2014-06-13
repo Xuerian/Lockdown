@@ -236,6 +236,9 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:AddDelayedWindowEventListener("GenericEvent_OpenEventStatsZombie", "PublicEventStatsForm")
 	-- Match Tracker / PVP Score
 	self:AddDelayedWindowEventListener("Datachron_LoadPvPContent", "MatchTracker")
+	-- Bank
+	self:AddDelayedWindowEventListener("ShowBank", "BankViewerForm")
+	self:AddDelayedWindowEventListener("ToggleBank", "BankViewerForm")
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
