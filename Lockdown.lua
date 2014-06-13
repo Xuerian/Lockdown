@@ -230,8 +230,10 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Instance settings
 	self:AddDelayedWindowEventListener("ShowInstanceGameModeDialog", "InstanceSettingsForm")
 	self:AddDelayedWindowEventListener("ShowInstanceRestrictedDialog", "InstanceSettingsRestrictedForm")
-	-- Public event voting
+	-- Public events
 	self:AddDelayedWindowEventListener("PublicEventInitiateVote", "PublicEventVoteForm")
+	self:AddDelayedWindowEventListener("PublicEventStart", "PublicEventStatsForm")
+	self:AddDelayedWindowEventListener("GenericEvent_OpenEventStatsZombie", "PublicEventStatsForm")
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
