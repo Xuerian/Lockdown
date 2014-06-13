@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<Addon Name="Lockdown" Version="0.3" Author="Xuerian" APIVersion="8" Description="Automatic mouselock/Action combat addon">
+<Addon Name="Lockdown" Version="1.0" Author="Xuerian" APIVersion="8" Description="Automatic mouselock/Action combat">
     <Script Name="Lockdown.lua"/>
     <Form Name="Lockdown.xml"/>
 </Addon>
