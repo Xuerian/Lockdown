@@ -73,8 +73,6 @@ local Lockdown = {
 		free_with_ctrl = false,
 		free_with_alt = true,
 		reticle_show = true,
-		reticle_offset_y = -100,
-		reticle_offset_x = 0,
 		reticle_target = false,
 		reticle_target_neutral = true,
 		reticle_target_hostile = true,
@@ -487,18 +485,6 @@ function Lockdown:OnTargetDelaySlider(btn)
 	self.timerDelayedTarget:Set(self.settings.reticle_target_delay, false)
 end
 
-function Lockdown:On_reticle_offset_x(btn)
-	self.settings.reticle_offset_x = btn:GetValue()
-	self.tWnd.slider_reticle_offset_x_text:SetText(btn:GetValue())
-	self:Reticle_UpdatePosition()
-end
-
-function Lockdown:On_reticle_offset_y(btn)
-	self.settings.reticle_offset_y = btn:GetValue()
-	self.tWnd.slider_reticle_offset_y_text:SetText(btn:GetValue())
-	self:Reticle_UpdatePosition()
-end
-
 function Lockdown:OnConfigure()
 	self:UpdateConfigUI()
 	self.wndOptions:Show(true, true)
@@ -522,10 +508,6 @@ function Lockdown:UpdateConfigUI()
 	w.FreeWithShiftBtn:SetCheck(s.free_with_shift)
 	w.FreeWithCtrlBtn:SetCheck(s.free_with_ctrl)
 	w.FreeWithAltBtn:SetCheck(s.free_with_alt)
-	w.slider_reticle_offset_x_text:SetText(s.reticle_offset_x)
-	w.slider_reticle_offset_x:SetValue(s.reticle_offset_x)
-	w.slider_reticle_offset_y_text:SetText(s.reticle_offset_y)
-	w.slider_reticle_offset_y:SetValue(s.reticle_offset_y)
 end
 
 function Lockdown:OnCloseButton()
@@ -700,7 +682,7 @@ function Lockdown:Reticle_UpdatePosition()
 	local nRetW, nRetH = 32, 32
 
 	local tSize = Apollo.GetDisplaySize()
-	local nMidW, nMidH = tSize.nWidth/2 + self.settings.reticle_offset_x, tSize.nHeight/2 + self.settings.reticle_offset_y
+	local nMidW, nMidH = tSize.nWidth/2, tSize.nHeight/2
 
 	self.wndReticle:SetAnchorOffsets(nMidW - nRetW/2, nMidH - nRetH/2, nMidW + nRetW/2, nMidH + nRetH/2)
 	self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget"):SetOpacity(0.3)
