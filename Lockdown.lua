@@ -359,13 +359,11 @@ function Lockdown:TimerHandler_ColdPulse()
 			if not bColdSuspend then
 				bColdSuspend = true
 				self:SuspendActionMode()
-				print("Cold suspend")
 			end
 		elseif bColdSuspend then
 			if self.bActiveIntent and not GameLib.IsMouseLockOn() and bColdSuspend and not pulse_core(self, tHotWindows) then
 				bColdSuspend = false
 				self:SetActionMode(true)
-				print("Cold resume")
 			end
 		end
 	end
@@ -377,13 +375,11 @@ function Lockdown:TimerHandler_HotPulse()
 			if not bHotSuspend then
 				bHotSuspend = true
 				self:SuspendActionMode()
-				print("Hot suspend")
 			end
 		elseif bHotSuspend then
 			if self.bActiveIntent and not GameLib.IsMouseLockOn() and bHotSuspend and not pulse_core(self, tColdWindows, true) then
 				bHotSuspend = false
 				self:SetActionMode(true)
-				print("Hot resume")
 			end
 		end
 	end
