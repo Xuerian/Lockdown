@@ -339,8 +339,14 @@ local function pulse_core(self, t, csi)
 
 		-- CSI(?) dialogs
 		-- TODO: Skip inconsequential CSI dialogs (QTEs)
-		if csi and CSIsLib.GetActiveCSI() and not tSkipWindows.CSI then
-			bWindowUnlock = true
+		if csi then
+			if CSIsLib.GetActiveCSI() then
+				if not tSkipWindows.CSI then
+					bWindowUnlock = true
+				end
+			else
+				tSkipWindows.CSI = false
+			end
 		end
 	end
 
