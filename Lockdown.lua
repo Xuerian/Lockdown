@@ -252,8 +252,8 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Oh my
 	self:KeyOrModifierUpdated()
 
-end
 
+	self:SetActionMode(true)
 end
 
 -- Disover frames we should pause for
