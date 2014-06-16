@@ -140,7 +140,7 @@ function Lockdown:OnRestore(eLevel, tData)
 		end
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
-		self.timerDelayedTarget:Set(self.settings.reticle_target_delay, false)
+		self.timerDelayedTarget:Set(self.settings.reticle_target_delay / 1000, false)
 	end
 end
 
@@ -155,7 +155,6 @@ end
 
 function Lockdown:OnLoad()
 	-- Load reticle
-	self.xml = XmlDoc.CreateFromFile("Lockdown.xml")
 	self.wndReticle = Apollo.LoadForm("Lockdown.xml", "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
 	self.wndReticle:Show(false)
 	self:Reticle_UpdatePosition()
@@ -166,10 +165,6 @@ function Lockdown:OnLoad()
 
 	-- Options
 	Apollo.RegisterSlashCommand("lockdown", "OnConfigure", self)
-	self.wndOptions = Apollo.LoadForm("Lockdown.xml", "Lockdown_OptionsForm", nil, self)
-	self.tWnd = children_by_name(self.wndOptions)
-
-	self.xml = nil
 
 	-- Targeting
 	-- TODO: Only do this when settings.reticle_target is on
@@ -395,31 +390,41 @@ function Lockdown:TimerHandler_Relock()
 	self:SetActionMode(true)
 end
 
--- Options
-local bBindMode, sWhichBind = false, nil
-local function OnModifierBtn(btn, optkey)
-	local mod = self.settings[optkey]
-	if not mod then
-		mod = "shift"
-	elseif mod == "shift" then
-		mod = "control"
-	else
-		mod = false
-	end
+-- Specific setting change handlers
+-- CAN'T TAKE THE CHANGE, MAN
+local ChangeHandlers = {}
+
+function ChangeHandlers.reticle_target_delay(value)
+	Lockdown.timerDelayedTarget:Set(value, false)
 end
 
--- Enter bind mode for a given binding button
-local function BindClick(btn, which)
+function ChangeHandlers.reticle_opacity(value)
+	Lockdown.wndReticle:Show(true)
+	Lockdown.wndReticleSpriteTarget:SetOpacity(value)
+end
+
+-- Per category widget handlers
+-- Binding keys
+local tBindKeyMap = {}
+function Lockdown:OnBindKey(btn)
+	local setting = tBindKeyMap[btn:GetName()]
 	if not bBindMode then
 		bBindMode = true
-		sWhichBind = which
 		btn:SetText(L.button_label_bind_wait)
+		btn:SetCheck(true)
+		sWhichBind = setting
+	elseif sWhichBind == setting then
+		bBindMode = false
+		btn:SetText(SystemKeyMap[self.settings[setting]])
+		btn:SetCheck(false)
 	end
 end
 
--- Cycle modifier for a given modifier button
-local function ModifierClick(which)
-	local mod = Lockdown.settings[which]
+-- Binding modifiers
+local tBindModMap = {}
+function Lockdown:OnBindMod(btn)
+	local setting = tBindModMap[btn:GetName()]
+	local mod = self.settings[setting]
 	if not mod then
 		mod = "shift"
 	elseif mod == "shift" then
@@ -427,101 +432,141 @@ local function ModifierClick(which)
 	else
 		mod = false
 	end
-	Lockdown.settings[which] = mod
-	Lockdown:KeyOrModifierUpdated()
-	Lockdown:UpdateConfigUI()
+	self.settings[setting] = mod
+	self:KeyOrModifierUpdated()
+	btn:SetText(mod and mod or L.button_label_mod)
 end
 
--- UI callbacks
-function Lockdown:OnToggleKeyBtn(btn)
-	BindClick(btn, "toggle_key")
+-- Checkboxes
+local tCheckboxMap = {}
+function Lockdown:OnButtonCheck(btn)
+	self.settings[tCheckboxMap[btn:GetName()]] = btn:IsChecked()
 end
 
-function Lockdown:OnToggleModifierBtn()
-	ModifierClick("toggle_modifier")
+-- Sliders
+local tSliderMap = {}
+function Lockdown:OnSlider(slider)
+	local setting, value = tSliderMap[slider:GetName()], slider:GetValue()
+	self.settings[setting] = value
+	if ChangeHandlers[setting] then
+		ChangeHandlers[setting](value)
+	end
+	self:UpdateWidget_Slider(slider, setting)
 end
 
-function Lockdown:OnLockTargetKeyBtn(btn)
-	BindClick(btn, "locktarget_key")
+function Lockdown:UpdateWidget_Slider(slider, setting)
+	local text = self.w["Text_"..setting]
+	if text then
+		text:SetText(self.settings[setting])
+	end
 end
 
-function Lockdown:OnLockTargetModifierBtn()
-	ModifierClick("locktarget_modifier")
-end
-
-function Lockdown:BtnTargetMouseoverKey(btn)
-	BindClick(btn, "targetmouseover_key")
-end
-
-function Lockdown:BtnTargetMouseoverMod()
-	ModifierClick("targetmouseover_modifier")
-end
-
-
-function Lockdown:OnReticleTargetBtn(btn)
-	self.settings.reticle_target = btn:IsChecked()
-end
-
-function Lockdown:OnReticleTargetHostileBtn(btn)
-	self.settings.reticle_target_hostile = btn:IsChecked()
-end
-
-function Lockdown:OnReticleTargetFriendlyBtn(btn)
-	self.settings.reticle_target_friendly = btn:IsChecked()
-end
-
-function Lockdown:OnReticleTargetNeutralBtn(btn)
-	self.settings.reticle_target_neutral = btn:IsChecked()
-end
-
-function Lockdown:OnReticleShowBtn(btn)
-	self.settings.reticle_show = btn:IsChecked()
-end
-
-function Lockdown:OnFreeWithShiftBtn(btn)
-	self.settings.free_with_shift = btn:IsChecked()
-end
-
-function Lockdown:OnFreeWithCtrlBtn(btn)
-	self.settings.free_with_ctrl = btn:IsChecked()
-end
-
-function Lockdown:OnFreeWithAltBtn(btn)
-	self.settings.free_with_alt = btn:IsChecked()
-end
-
-function Lockdown:OnTargetDelaySlider(btn)
-	self.settings.reticle_target_delay = btn:GetValue()
-	self.timerDelayedTarget:Set(self.settings.reticle_target_delay, false)
-end
-
+-- General handlers
 function Lockdown:OnConfigure()
 	self:UpdateConfigUI()
 	self.wndOptions:Show(true, true)
 end
 
--- Update all text in config window
-function Lockdown:UpdateConfigUI()
-	local w, s = self.tWnd, self.settings
-	w.ToggleKeyBtn:SetText(SystemKeyMap[s.toggle_key])
-	w.LockTargetKeyBtn:SetText(SystemKeyMap[s.locktarget_key])
-	w.BtnTargetMouseoverKey:SetText(SystemKeyMap[s.targetmouseover_key])
-	w.ToggleModifierBtn:SetText(s.toggle_modifier and s.toggle_modifier or L.button_label_modifier)
-	w.LockTargetModifierBtn:SetText(s.locktarget_modifier and s.locktarget_modifier or L.button_label_modifier)
-	w.BtnTargetMouseoverMod:SetText(s.targetmouseover_modifier and s.targetmouseover_modifier or L.button_label_modifier)
-	w.ReticleShowBtn:SetCheck(s.reticle_show)
-	w.ReticleTargetBtn:SetCheck(s.reticle_target)
-	w.ReticleTargetHostileBtn:SetCheck(s.reticle_target_hostile)
-	w.ReticleTargetFriendlyBtn:SetCheck(s.reticle_target_friendly)
-	w.ReticleTargetNeutralBtn:SetCheck(s.reticle_target_neutral)
-	w.TargetDelaySlider:SetValue(s.reticle_target_delay)
-	w.FreeWithShiftBtn:SetCheck(s.free_with_shift)
-	w.FreeWithCtrlBtn:SetCheck(s.free_with_ctrl)
-	w.FreeWithAltBtn:SetCheck(s.free_with_alt)
+function Lockdown:OnConfigureClose()
+	self.wndOptions:Show(false, true)
 end
 
-function Lockdown:OnCloseButton()
-	self.wndOptions:Show(false, true)
+function Lockdown:OnTab_General()
+	self.w.Content_General:Show(true)
+	self.w.Content_Reticle:Show(false)
+	self.w.Tab_General:SetCheck(true)
+	self.w.Tab_Reticle:SetCheck(false)
+end
+
+function Lockdown:OnTab_Reticle()
+	self.w.Content_General:Show(false)
+	self.w.Content_Reticle:Show(true)
+	self.w.Tab_General:SetCheck(false)
+	self.w.Tab_Reticle:SetCheck(true)
+end
+
+-- Update all text in config window
+local bSettingsInit = false
+function Lockdown:UpdateConfigUI()
+	local s, w = self.settings, self.w
+	if not bSettingsInit then
+		-- Load settings window
+		self.wndOptions = Apollo.LoadForm("Lockdown.xml", "Lockdown_OptionsForm", nil, self)
+		-- Reference all children by name
+		self.w = children_by_name(self.wndOptions)
+		w = self.w
+
+		-- Options children cache
+		--[=[ 	w = setmetatable({}, {__index = function(t, k)
+				local child = self.wndOptions:FindChild(k)
+				if child then
+					rawset(t, k, child)
+				end
+				return child
+			end})
+			self.xml = nil--]=]
+
+		-- Map elements matching Prefix_{setting} to settings
+		--  in given element_map table
+		-- Add desired events to those elements
+		local match, format = string.match, string.format
+		local function SetUpElements(element_prefix, element_map, event_map, setting_suffix)
+			-- Search for elements matching prefix
+			local pattern = "^"..element_prefix.."_(.+)$"
+			for name, elem in pairs(self.w) do
+				local found = match(name, pattern)
+				if found then
+					-- Confirm existing setting
+					local setting = setting_suffix and format("%s_%s", found, setting_suffix) or found
+					if self.settings[setting] ~= nil then
+						-- Map
+						element_map[name] = setting
+						-- Add event handlers
+						for event, handler in pairs(event_map) do
+							elem:AddEventHandler(event, handler, self)
+						end
+					else
+						print("Element not bound", name)
+					end
+				end
+			end
+		end
+
+		-- Checkboxes
+		SetUpElements("Check", tCheckboxMap, { ButtonCheck = "OnButtonCheck", ButtonUncheck = "OnButtonCheck" })
+
+		-- Binding keys
+		SetUpElements("Key", tBindKeyMap, { ButtonSignal = "OnBindKey" }, "key")
+
+		-- Binding modifiers
+		SetUpElements("Mod", tBindModMap, { ButtonSignal = "OnBindMod" }, "mod")
+
+		-- Sliders
+		SetUpElements("Slider", tSliderMap, { SliderBarChanged = "OnSlider" })
+
+		-- Default tab
+		self:OnTab_General()
+	end
+
+	-- Update checkboxes
+	for name, setting in pairs(tCheckboxMap) do
+		w[name]:SetCheck(s[setting])
+	end
+	-- Update key bind buttons
+	bBindMode = false
+	for name, setting in pairs(tBindKeyMap) do
+		w[name]:SetText(SystemKeyMap[s[setting]])
+		w[name]:SetCheck(false)
+	end
+	-- Update key modifier buttons
+	for name, setting in pairs(tBindModMap) do
+		w[name]:SetText(s[setting] and s[setting] or L.button_label_mod)
+	end
+	-- Update sliders
+	for name, setting in pairs(tSliderMap) do
+		w[name]:SetValue(s[setting])
+		self:UpdateWidget_Slider(w[name], setting)
+	end
 end
 
 -- Store key and modifier check function
