@@ -100,7 +100,6 @@ end
 
 -- Startup
 function Lockdown:Init()
-	self.bActiveIntent = true
 	Apollo.RegisterAddon(self, true, L.button_configure)
 end
 
@@ -135,7 +134,7 @@ end
 
 function Lockdown:OnRestore(eLevel, tData)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account and tData then
-		-- Restore settings and initialize defaults
+		-- Restore settings
 		for k,v in pairs(tData) do
 			self.settings[k] = v
 		end
@@ -319,6 +318,7 @@ end
 local bFreeingMouse = false -- User freeing mouse with a modifier key
 local tSkipWindows = {}
 local bColdSuspend, bHotSuspend = false, false
+local bActiveIntent = true
 
 local function pulse_core(self, t, csi)
 	local bWindowUnlock = false
@@ -361,7 +361,7 @@ function Lockdown:TimerHandler_ColdPulse()
 				self:SuspendActionMode()
 			end
 		elseif bColdSuspend then
-			if self.bActiveIntent and not GameLib.IsMouseLockOn() and bColdSuspend and not pulse_core(self, tHotWindows) then
+			if bActiveIntent and not GameLib.IsMouseLockOn() and bColdSuspend and not pulse_core(self, tHotWindows) then
 				bColdSuspend = false
 				self:SetActionMode(true)
 			end
@@ -377,7 +377,7 @@ function Lockdown:TimerHandler_HotPulse()
 				self:SuspendActionMode()
 			end
 		elseif bHotSuspend then
-			if self.bActiveIntent and not GameLib.IsMouseLockOn() and bHotSuspend and not pulse_core(self, tColdWindows, true) then
+			if bActiveIntent and not GameLib.IsMouseLockOn() and bHotSuspend and not pulse_core(self, tColdWindows, true) then
 				bHotSuspend = false
 				self:SetActionMode(true)
 			end
@@ -563,7 +563,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 
 	-- Open options on Escape
 	-- TODO: don't reset cursor position when a blocking window is still open
-	if iKey == 27 and self.bActiveIntent then
+	if iKey == 27 and bActiveIntent then
 		if not self:PollAllWindows() then
 			if GameLib.GetTargetUnit() then
 				GameLib.SetTargetUnit()
@@ -580,7 +580,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Toggle mode
 	elseif iKey == toggle_key and (not toggle_modifier or toggle_modifier()) then
 		-- Save currently active windows and resume
-		if self.bActiveIntent and not GameLib.IsMouseLockOn() then
+		if bActiveIntent and not GameLib.IsMouseLockOn() then
 			wipe(tSkipWindows)
 
 			for _,wnd in pairs(tColdWindows) do
@@ -600,7 +600,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 			self:SetActionMode(true)
 		else
 			-- Toggle
-			self:SetActionMode(not self.bActiveIntent)
+			self:SetActionMode(not bActiveIntent)
 		end
 	
 	-- Lock target
@@ -663,7 +663,7 @@ end
 
 -- Action mode toggle
 function Lockdown:SetActionMode(bState)
-	self.bActiveIntent = bState
+	bActiveIntent = bState
 	if GameLib.IsMouseLockOn() ~= bState then
 		GameLib.SetMouseLock(bState)
 	end
