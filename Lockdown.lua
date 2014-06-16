@@ -190,7 +190,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Poll frames for visibility.
 	-- I'd much rather use hooks or callbacks or events, but I can't hook, I can't find the right callbacks/they don't work, and the events aren't consistant or listed. 
 	-- You made me do this, Carbine.
-	self.timerColdPulse = ApolloTimer.Create(1.0, true, "TimerHandler_ColdPulse", self)
+	self.timerColdPulse = ApolloTimer.Create(0.5, true, "TimerHandler_ColdPulse", self)
 	self.timerHotPulse = ApolloTimer.Create(0.2, true, "TimerHandler_HotPulse", self)
 	
 	-- Keybinds
