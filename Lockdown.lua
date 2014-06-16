@@ -79,9 +79,12 @@ local Lockdown = {
 		reticle_target_hostile = true,
 		reticle_target_friendly = true,
 		reticle_target_delay = 0,
-	}
+		reticle_opacity = 0.3,
+		reticle_size = 32,
+		reticle_sprite = "giznat"
+	},
+	reticles = {}
 }
-
 -- Helpers
 local function print(...)
 	local out = {}
@@ -156,6 +159,11 @@ end
 function Lockdown:OnLoad()
 	-- Load reticle
 	self.wndReticle = Apollo.LoadForm("Lockdown.xml", "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
+	self.wndReticleSpriteTarget = self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget")
+
+	-- Add reticles
+	self:AddReticle("tiny", [[Lockdown\reticles\tiny.png]], 32)
+	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 32)
 	self.wndReticle:Show(false)
 	self:Reticle_UpdatePosition()
 	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_UpdatePosition", self)
@@ -241,14 +249,6 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 
 end
 
--- Take over MouselockIndicatorPixel to show dirty lock status
-function Lockdown:TimerHandler_PixelHook()
-	local pixel = Apollo.GetAddon("MouselockIndicatorPixel") or Apollo.GetAddon("MouselockRebind")
-	if pixel and pixel.timer and not self.wndPixels then
-		pixel.timer:Stop()
-		self.timerPixel = ApolloTimer.Create(0.05, true, "TimerHandler_PixelPulse", self)
-		self.wndPixels = pixel.wndPixels
-	end
 end
 
 -- Disover frames we should pause for
@@ -731,16 +731,27 @@ end
 
 -- Adjust reticle
 function Lockdown:Reticle_UpdatePosition()
-	-- Doing it wrong, apparently. 
-	-- local nRetW = self.wndReticle:FindChild("Lockdown_ReticleForm"):GetWidth()
-	-- local nRetH = self.wndReticle:FindChild("Lockdown_ReticleForm"):GetHeight() 
-	local nRetW, nRetH = 32, 32
+	local s = self.settings
+	local n = self.reticles[s.reticle_sprite] / 2
+	self.wndReticleSpriteTarget:SetAnchorOffsets(-n, -n, n, n)
+	self.wndReticleSpriteTarget:SetOpacity(s.reticle_opacity)
+	self.wndReticleSpriteTarget:SetSprite("reticles:"..s.reticle_sprite)
+end
 
-	local tSize = Apollo.GetDisplaySize()
-	local nMidW, nMidH = tSize.nWidth/2, tSize.nHeight/2
-
-	self.wndReticle:SetAnchorOffsets(nMidW - nRetW/2, nMidH - nRetH/2, nMidW + nRetW/2, nMidH + nRetH/2)
-	self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget"):SetOpacity(0.3)
+function Lockdown:AddReticle(name, path, size)
+	local tSpriteXML = {
+		__XmlNode = "Sprites", {
+			__XmlNode = "Sprite", Name = name, Cycle = 1, {
+				__XmlNode = "Frame", Texture = path,
+				x0 = 0, x2 = 0, x3 = 0, x4 = 0, x5 = size,
+				y0 = 0, y2 = 0, y3 = 0, y4 = 0, y5 = size,
+				HotSpotX = 0, HotSpotY = 0, Duration = 1.0,
+				StartColor = "white", EndColor = "white"
+			}
+		}
+	}
+	Apollo.LoadSprites(XmlDoc.CreateFromTable(tSpriteXML), "reticles")
+	self.reticles[name] = size
 end
 
 Lockdown:Init()
