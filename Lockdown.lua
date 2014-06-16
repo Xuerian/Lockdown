@@ -622,6 +622,12 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 			end
 		end
 	
+	-- Static hotkeys, F7 and F8
+	elseif iKey == 118 then
+		self:SetActionMode(true)
+	elseif iKey == 119 then
+		self:SetActionMode(false)
+
 	-- Target mouseover
 	elseif iKey == targetmouseover_key and (not targetmouseover_mod or targetmouseover_mod()) then
 		GameLib.SetTargetUnit(GetMouseOverUnit())
