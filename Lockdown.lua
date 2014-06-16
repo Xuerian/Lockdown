@@ -1,5 +1,3 @@
--- Carbine, full rights if you want to use any of it.
-
 -- Addon authors or Carbine, to add a window to the list of pausing windows, call this for normal windows
 -- Event_FireGenericEvent("GenericEvent_CombatMode_RegisterPausingWindow", wndHandle)
 
@@ -157,6 +155,7 @@ local function children_by_name(wnd, t)
 end
 
 function Lockdown:OnLoad()
+	----------------------------------------------------------
 	-- Load reticle
 	self.wndReticle = Apollo.LoadForm("Lockdown.xml", "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
 	self.wndReticleSpriteTarget = self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget")
@@ -171,9 +170,11 @@ function Lockdown:OnLoad()
 	-- For some reason on reloadui, the mouse locks in the NE screen quadrant
 	ApolloTimer.Create(0.7, false, "TimerHandler_InitialLock", self)
 
+	----------------------------------------------------------
 	-- Options
 	Apollo.RegisterSlashCommand("lockdown", "OnConfigure", self)
 
+	----------------------------------------------------------
 	-- Targeting
 	-- TODO: Only do this when settings.reticle_target is on
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
@@ -182,6 +183,9 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerRelock:Stop()
 	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
 	self.timerDelayedTarget:Stop()
+
+	----------------------------------------------------------
+	-- Automatic [un]locking
 
 	-- Crawl for frames to hook
 	self.timerFrameCrawl = ApolloTimer.Create(5.0, false, "TimerHandler_FrameCrawl", self)
@@ -195,10 +199,6 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- You made me do this, Carbine.
 	self.timerColdPulse = ApolloTimer.Create(0.5, true, "TimerHandler_ColdPulse", self)
 	self.timerHotPulse = ApolloTimer.Create(0.2, true, "TimerHandler_HotPulse", self)
-	
-	-- Keybinds
-	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
-	self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
 
 	-- External windows
 	Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
@@ -242,6 +242,11 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Bank
 	self:AddDelayedWindowEventListener("ShowBank", "BankViewerForm")
 	self:AddDelayedWindowEventListener("ToggleBank", "BankViewerForm")
+	
+	----------------------------------------------------------
+	-- Keybinds
+	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
+	self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
