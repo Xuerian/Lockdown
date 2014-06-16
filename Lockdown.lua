@@ -191,7 +191,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerFrameCrawl = ApolloTimer.Create(5.0, false, "TimerHandler_FrameCrawl", self)
 
 	-- Wait for windows to be created or re-created
-	self.timerDelayedFrameCatch = ApolloTimer.Create(0.1, true, "TimerHandler_DelayedFrameCatch", self)
+	self.timerDelayedFrameCatch = ApolloTimer.Create(0.1, false, "TimerHandler_DelayedFrameCatch", self)
 	self.timerDelayedFrameCatch:Stop()
 
 	-- Poll frames for visibility.
@@ -306,8 +306,7 @@ function Lockdown:TimerHandler_DelayedFrameCatch()
 			tDelayedWindows[sName] = nil
 		end
 	end
-		self.timerDelayedFrameCatch:Stop()
-	end
+end
 
 -- API
 function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
