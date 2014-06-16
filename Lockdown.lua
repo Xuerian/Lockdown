@@ -51,7 +51,7 @@ local tLocalization = {
 		button_configure = "Lockdown",
 		button_label_bind = "Click to change",
 		button_label_bind_wait = "Press new key",
-		button_label_modifier = "Modifier"
+		button_label_mod = "Modifier"
 	}
 }
 local L = setmetatable({}, {__index = tLocalization.en_us})
@@ -64,12 +64,12 @@ local SystemKeyMap
 -- Defaults
 local Lockdown = {
 	settings = {
-		toggle_key = 192, -- backquote
-		toggle_modifier = false,
+		togglelock_key = 192, -- backquote
+		togglelock_mod = false,
 		locktarget_key = 20, -- caps lock
-		locktarget_modifier = false,
+		locktarget_mod = false,
 		targetmouseover_key = 84, -- t
-		targetmouseover_modifier = "control",
+		targetmouseover_mod = "control",
 		free_with_shift = false,
 		free_with_ctrl = false,
 		free_with_alt = true,
@@ -525,7 +525,7 @@ function Lockdown:OnCloseButton()
 end
 
 -- Store key and modifier check function
-local toggle_key, toggle_modifier, locktarget_key, locktarget_modifier, targetmousover_key, targetmouseover_modifier
+local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, targetmousover_key, targetmouseover_mod
 local function Upvalues(whichkey, whichmod)
 	local mod = Lockdown.settings[whichmod]
 	if mod == "shift" then
@@ -539,9 +539,9 @@ local function Upvalues(whichkey, whichmod)
 end
 
 function Lockdown:KeyOrModifierUpdated()
-	toggle_key, toggle_modifier = Upvalues("toggle_key", "toggle_modifier")
-	locktarget_key, locktarget_modifier = Upvalues("locktarget_key", "locktarget_modifier")
-	targetmouseover_key, targetmouseover_modifier = Upvalues("targetmouseover_key", "targetmouseover_modifier")
+	togglelock_key, togglelock_mod = Upvalues("togglelock_key", "togglelock_mod")
+	locktarget_key, locktarget_mod = Upvalues("locktarget_key", "locktarget_mod")
+	targetmouseover_key, targetmouseover_mod = Upvalues("targetmouseover_key", "targetmouseover_mod")
 	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
 		self.timerFreeKeys:Start()
 	else
@@ -574,11 +574,11 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		end
 	
 	-- Target mouseover
-	elseif iKey == targetmouseover_key and (not targetmouseover_modifier or targetmouseover_modifier()) then
+	elseif iKey == targetmouseover_key and (not targetmouseover_mod or targetmouseover_mod()) then
 		GameLib.SetTargetUnit(GetMouseOverUnit())
 
 	-- Toggle mode
-	elseif iKey == toggle_key and (not toggle_modifier or toggle_modifier()) then
+	elseif iKey == togglelock_key and (not togglelock_mod or togglelock_mod()) then
 		-- Save currently active windows and resume
 		if bActiveIntent and not GameLib.IsMouseLockOn() then
 			wipe(tSkipWindows)
@@ -604,7 +604,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		end
 	
 	-- Lock target
-	elseif iKey == locktarget_key and (not locktarget_modifier or locktarget_modifier()) then
+	elseif iKey == locktarget_key and (not locktarget_mod or locktarget_mod()) then
 		if uLockedTarget then
 			uLockedTarget = nil
 			GameLib.SetTargetUnit()
