@@ -128,13 +128,13 @@ function Lockdown:AddDelayedWindowEventListener(sEvent, sName)
 end
 
 function Lockdown:OnSave(eLevel)
-	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.General then
 		return self.settings
 	end
 end
 
 function Lockdown:OnRestore(eLevel, tData)
-	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account and tData then
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.General and tData then
 		-- Restore settings
 		for k,v in pairs(tData) do
 			self.settings[k] = v
