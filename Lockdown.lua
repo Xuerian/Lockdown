@@ -246,7 +246,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	----------------------------------------------------------
 	-- Keybinds
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
-	self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
+	self.timerToggleModifier = ApolloTimer.Create(0.1, true, "TimerHandler_ToggleModifier", self)
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
@@ -314,14 +314,14 @@ function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
 end
 
 -- Poll unlocking frames
-local bFreeingMouse = false -- User freeing mouse with a modifier key
+local bToggleModifier = false -- User toggling mouse with a modifier key
 local tSkipWindows = {}
 local bColdSuspend, bHotSuspend = false, false
 local bActiveIntent = true
 
 local function pulse_core(self, t, csi)
 	local bWindowUnlock = false
-	if not bFreeingMouse then
+	if not bToggleModifier then
 		local tSkipWindows = tSkipWindows
 		-- Poll windows
 		for _, wnd in pairs(t) do
@@ -592,9 +592,9 @@ function Lockdown:KeyOrModifierUpdated()
 	locktarget_key, locktarget_mod = Upvalues("locktarget_key", "locktarget_mod")
 	targetmouseover_key, targetmouseover_mod = Upvalues("targetmouseover_key", "targetmouseover_mod")
 	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
-		self.timerFreeKeys:Start()
+		self.timerToggleModifier:Start()
 	else
-		self.timerFreeKeys:Stop()
+		self.timerToggleModifier:Stop()
 	end
 end
 
@@ -670,17 +670,21 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	end
 end
 
--- Watch for modifiers to pause mouselock
-function Lockdown:TimerHandler_FreeKeys()
-	local old = bFreeingMouse
-	bFreeingMouse = ((self.settings.free_with_shift and Apollo.IsShiftKeyDown())
+-- Watch for modifiers to toggle mouselock
+function Lockdown:TimerHandler_ToggleModifier()
+	local old = bToggleModifier
+	bToggleModifier = ((self.settings.free_with_shift and Apollo.IsShiftKeyDown())
 		or (self.settings.free_with_ctrl and Apollo.IsControlKeyDown())
 		or (self.settings.free_with_alt and Apollo.IsAltKeyDown()))
-	if bFreeingMouse and GameLib.IsMouseLockOn() then
-		self:SuspendActionMode()
+	if not old and bToggleModifier then
+		if GameLib.IsMouseLockOn() then
+			self:SuspendActionMode()
+		else
+			self:ForceActionMode()
+		end
 	end
-	if old and not bFreeingMouse and not self:PollAllWindows() then
-		self:SetActionMode(true)
+	if old and not bToggleModifier then
+		self:SetActionMode(bActiveIntent and not self:PollAllWindows())
 	end
 end
 
@@ -728,6 +732,15 @@ function Lockdown:SetActionMode(bState)
 	end
 	self.wndReticle:Show(bState and self.settings.reticle_show)
 	-- TODO: Sounds
+end
+
+-- Force without enabling
+function Lockdown:ForceActionMode()
+	if not GameLib.IsMouseLockOn() then
+		GameLib.SetMouseLock(true)
+		self.wndReticle:Show(true)
+	end
+	-- TODO: Indicate inactive-but-enabled status
 end
 
 -- Suspend without disabling
