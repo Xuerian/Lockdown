@@ -684,7 +684,11 @@ function Lockdown:TimerHandler_ToggleModifier()
 		end
 	end
 	if old and not bToggleModifier then
-		self:SetActionMode(bActiveIntent and not self:PollAllWindows())
+		if self:PollAllWindows() then
+			self:SuspendActionMode()
+		else
+			self:SetActionMode(bActiveIntent)
+		end
 	end
 end
 
