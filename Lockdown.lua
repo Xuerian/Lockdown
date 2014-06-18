@@ -496,6 +496,7 @@ function Lockdown:UpdateConfigUI()
 	if not bSettingsInit then
 		-- Load settings window
 		self.wndOptions = Apollo.LoadForm("Lockdown.xml", "Lockdown_OptionsForm", nil, self)
+		self:RegisterWindow(self.wndOptions)
 		-- Reference all children by name
 		self.w = children_by_name(self.wndOptions)
 		w = self.w
