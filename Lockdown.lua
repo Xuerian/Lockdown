@@ -1,5 +1,5 @@
 -- Addon authors or Carbine, to add a window to the list of pausing windows, call this for normal windows
--- Event_FireGenericEvent("GenericEvent_CombatMode_RegisterPausingWindow", wndHandle)
+-- Event_FireGenericEvent("CombatMode_RegisterPausingWindow", wndHandle)
 
 -- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful.
 
@@ -201,7 +201,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerHotPulse = ApolloTimer.Create(0.2, true, "TimerHandler_HotPulse", self)
 
 	-- External windows
-	Apollo.RegisterEventHandler("GenericEvent_CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
+	Apollo.RegisterEventHandler("CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
 
 	-- These windows are created or re-created and must be caught with event handlers
 	-- Abilities builder
