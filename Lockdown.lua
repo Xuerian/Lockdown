@@ -62,6 +62,7 @@ local SystemKeyMap
 -- Defaults
 local Lockdown = {
 	defaults = {
+		lock_on_load = true,
 		togglelock_key = 192, -- `
 		togglelock_mod = false,
 		locktarget_key = 20, -- Caps Lock
@@ -276,8 +277,9 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Oh my
 	self:KeyOrModifierUpdated()
 
-
-	self:SetActionMode(true)
+	if self.settings.lock_on_load then
+		self:SetActionMode(true)
+	end
 end
 
 -- Disover frames we should pause for
