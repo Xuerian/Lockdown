@@ -80,6 +80,14 @@ local Lockdown = {
 		reticle_opacity = 0.3,
 		reticle_size = 32,
 		reticle_sprite = "giznat",
+		reticle_offset_x = 0,
+		reticle_offset_y = -100,
+
+		ahk_lmb_key = 189, -- -
+		ahk_rmb_key = 187, -- =
+		ahk_mmb_key = "",
+		ahk_cursor_center = true,
+		ahk_update_interval = 100,
 	},
 	settings = {},
 	reticles = {}
@@ -136,6 +144,11 @@ end
 function Lockdown:OnSave(eLevel)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.General then
 		local s = self.settings
+		-- Wildstar doesn't provide a sane set of character codes. 
+		s.ahk_lmb = SystemKeyMap[s.ahk_lmb_key] or ""
+		s.ahk_rmb = SystemKeyMap[s.ahk_rmb_key] or ""
+		s.ahk_mmb = SystemKeyMap[s.ahk_mmb_key] or ""
+		return s
 	end
 end
 
@@ -149,6 +162,10 @@ function Lockdown:OnRestore(eLevel, tData)
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
 		self.timerDelayedTarget:Set(s.reticle_target_delay / 1000, false)
+		-- Show settings window after reload
+		if tData._is_ahk_reload then
+			self:OnConfigure()
+		end
 	end
 end
 
@@ -424,13 +441,14 @@ function Lockdown:OnBindKey(btn)
 		btn:SetText(L.button_label_bind_wait)
 		btn:SetCheck(true)
 		sWhichBind = setting
+		self.w.Btn_Unbind:Show(true)
 	elseif sWhichBind == setting then
 		bBindMode = false
 		btn:SetText(SystemKeyMap[self.settings[setting]])
 		btn:SetCheck(false)
+		self.w.Btn_Unbind:Show(false)
 	end
 end
-
 -- Binding modifiers
 local tBindModMap = {}
 function Lockdown:OnBindMod(btn)
@@ -480,6 +498,20 @@ end
 
 function Lockdown:OnConfigureClose()
 	self.wndOptions:Show(false, true)
+end
+
+function Lockdown:OnBtn_Unbind()
+	if bBindMode then
+		bBindMode = false
+		self.settings[sWhichBind] = ""
+		self:KeyOrModifierUpdated()
+		self:UpdateConfigUI()
+	end
+end
+
+function Lockdown:OnBtn_ReloadUI()
+	self.settings._is_ahk_reload = true
+	RequestReloadUI()
 end
 
 function Lockdown:OnTab_General()
@@ -580,6 +612,8 @@ function Lockdown:UpdateConfigUI()
 		w[name]:SetValue(s[setting])
 		self:UpdateWidget_Slider(w[name], setting)
 	end
+
+	self.w.Btn_Unbind:Show(false)
 end
 
 -- Store key and modifier check function
