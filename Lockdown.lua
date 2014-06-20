@@ -501,6 +501,7 @@ local bSettingsInit = false
 function Lockdown:UpdateConfigUI()
 	local s, w = self.settings, self.w
 	if not bSettingsInit then
+		bSettingsInit = true
 		-- Load settings window
 		self.wndOptions = Apollo.LoadForm("Lockdown.xml", "Lockdown_OptionsForm", nil, self)
 		self:RegisterWindow(self.wndOptions)
