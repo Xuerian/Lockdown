@@ -790,8 +790,6 @@ function Lockdown:AddReticle(name, path, size)
 	self.reticles[name] = size
 end
 
-Lockdown:Init()
-
 -- I don't want this at the top.
 SystemKeyMap = {
 	[8] = "Backspace",
@@ -890,3 +888,5 @@ SystemKeyMap = {
 	[221] = "]",
 	[222] = "'"
 }
+
+Lockdown:Init()
