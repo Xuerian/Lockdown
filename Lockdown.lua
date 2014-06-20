@@ -189,8 +189,8 @@ function Lockdown:OnLoad()
 	self:AddReticle("tiny", [[Lockdown\reticles\tiny.png]], 32)
 	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 32)
 	self.wndReticle:Show(false)
-	self:Reticle_UpdatePosition()
-	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_UpdatePosition", self)
+	self:Reticle_Update()
+	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_Update", self)
 
 	-- For some reason on reloadui, the mouse locks in the NE screen quadrant
 	ApolloTimer.Create(0.7, false, "TimerHandler_InitialLock", self)
@@ -423,11 +423,12 @@ function ChangeHandlers.reticle_target_delay(value)
 	Lockdown.timerDelayedTarget:Set(value, false)
 end
 
-function ChangeHandlers.reticle_opacity(value)
-	Lockdown.wndReticle:Show(true)
-	Lockdown.wndReticleSpriteTarget:SetOpacity(value)
+function ReticleChanged()
+	Lockdown.wndReticle:Show()
+	Lockdown:ReticleUpdate()
 end
 
+ChangeHandlers.reticle_opacity = ReticleChanged
 -- Per category widget handlers
 -- Binding keys
 local tBindKeyMap = {}
@@ -813,7 +814,7 @@ function Lockdown:SuspendActionMode()
 end
 
 -- Adjust reticle
-function Lockdown:Reticle_UpdatePosition()
+function Lockdown:Reticle_Update()
 	local s = self.settings
 	local n = self.reticles[s.reticle_sprite] / 2
 	self.wndReticleSpriteTarget:SetAnchorOffsets(-n, -n, n, n)
