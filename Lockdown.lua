@@ -558,7 +558,7 @@ function Lockdown:UpdateConfigUI()
 		local function SetUpElements(element_prefix, element_map, event_map, setting_suffix)
 			-- Search for elements matching prefix
 			local pattern = "^"..element_prefix.."_(.+)$"
-			for name, elem in pairs(self.w) do
+			for name, elem in pairs(w) do
 				local found = match(name, pattern)
 				if found then
 					-- Confirm existing setting
@@ -569,6 +569,15 @@ function Lockdown:UpdateConfigUI()
 						-- Add event handlers
 						for event, handler in pairs(event_map) do
 							elem:AddEventHandler(event, handler, self)
+						end
+						-- Localization
+						if L[setting] then
+							if element_prefix == "Check" then
+								elem:SetText(L[setting])
+							elseif element_prefix == "Slider"
+								or element_prefix == "Key" then
+								w["Widget_"..setting]:SetText(L[setting])
+							end
 						end
 					else
 						print("Element not bound", name, setting)
@@ -588,6 +597,13 @@ function Lockdown:UpdateConfigUI()
 
 		-- Sliders
 		SetUpElements("Slider", tSliderMap, { SliderBarChanged = "OnSlider" })
+
+		-- Blunt localization
+		for k,v in pairs(w) do
+			if L[k] then
+				L[k]:SetText(L[k])
+			end
+		end
 
 		-- Default tab
 		self:OnTab_General()
