@@ -61,12 +61,12 @@ local SystemKeyMap
 
 -- Defaults
 local Lockdown = {
-	settings = {
-		togglelock_key = 192, -- backquote
+	defaults = {
+		togglelock_key = 192, -- `
 		togglelock_mod = false,
-		locktarget_key = 20, -- caps lock
+		locktarget_key = 20, -- Caps Lock
 		locktarget_mod = false,
-		targetmouseover_key = 84, -- t
+		targetmouseover_key = 84, -- T
 		targetmouseover_mod = "control",
 		free_with_shift = false,
 		free_with_ctrl = false,
@@ -79,10 +79,16 @@ local Lockdown = {
 		reticle_target_delay = 0,
 		reticle_opacity = 0.3,
 		reticle_size = 32,
-		reticle_sprite = "giznat"
+		reticle_sprite = "giznat",
 	},
+	settings = {},
 	reticles = {}
 }
+
+for k,v in pairs(Lockdown.defaults) do
+	Lockdown.settings[k] = v
+end
+
 -- Helpers
 local function print(...)
 	local out = {}
@@ -129,19 +135,20 @@ end
 
 function Lockdown:OnSave(eLevel)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.General then
-		return self.settings
+		local s = self.settings
 	end
 end
 
 function Lockdown:OnRestore(eLevel, tData)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.General and tData then
+		local s = self.settings
 		-- Restore settings
-		for k,v in pairs(tData) do
-			self.settings[k] = v
+		for k,v in pairs(s) do
+			s[k] = tData[k]
 		end
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
-		self.timerDelayedTarget:Set(self.settings.reticle_target_delay / 1000, false)
+		self.timerDelayedTarget:Set(s.reticle_target_delay / 1000, false)
 	end
 end
 
