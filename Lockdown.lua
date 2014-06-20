@@ -539,7 +539,7 @@ function Lockdown:UpdateConfigUI()
 							elem:AddEventHandler(event, handler, self)
 						end
 					else
-						print("Element not bound", name)
+						print("Element not bound", name, setting)
 					end
 				end
 			end
