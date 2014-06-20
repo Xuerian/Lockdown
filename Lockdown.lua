@@ -436,14 +436,14 @@ end
 local tBindKeyMap = {}
 function Lockdown:OnBindKey(btn)
 	local setting = tBindKeyMap[btn:GetName()]
-	if not bBindMode then
-		bBindMode = true
+	if not self.bind_mode_active then
+		self.bind_mode_active = true
 		btn:SetText(L.button_label_bind_wait)
 		btn:SetCheck(true)
 		sWhichBind = setting
 		self.w.Btn_Unbind:Show(true)
 	elseif sWhichBind == setting then
-		bBindMode = false
+		self.bind_mode_active = false
 		btn:SetText(SystemKeyMap[self.settings[setting]])
 		btn:SetCheck(false)
 		self.w.Btn_Unbind:Show(false)
@@ -501,8 +501,8 @@ function Lockdown:OnConfigureClose()
 end
 
 function Lockdown:OnBtn_Unbind()
-	if bBindMode then
-		bBindMode = false
+	if self.bind_mode_active then
+		self.bind_mode_active = false
 		self.settings[sWhichBind] = ""
 		self:KeyOrModifierUpdated()
 		self:UpdateConfigUI()
@@ -598,7 +598,7 @@ function Lockdown:UpdateConfigUI()
 		w[name]:SetCheck(s[setting])
 	end
 	-- Update key bind buttons
-	bBindMode = false
+	self.bind_mode_active = false
 	for name, setting in pairs(tBindKeyMap) do
 		w[name]:SetText(SystemKeyMap[s[setting]])
 		w[name]:SetCheck(false)
@@ -645,8 +645,8 @@ end
 local uLockedTarget
 function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Listen for key to bind
-	if bBindMode then
-		bBindMode = false
+	if self.bind_mode_active then
+		self.bind_mode_active = false
 		self.settings[sWhichBind] = iKey
 		self:KeyOrModifierUpdated()
 		self:UpdateConfigUI()
