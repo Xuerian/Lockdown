@@ -1,5 +1,5 @@
 -- Addon authors or Carbine, to add a window to the list of pausing windows, call this for normal windows
--- Event_FireGenericEvent("CombatMode_RegisterPausingWindow", wndHandle)
+-- Event_FireGenericEvent("CombatMode_RegisterPausingWindow", wndHandle[, bCheckOften])
 
 -- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful.
 
@@ -226,7 +226,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerHotPulse = ApolloTimer.Create(0.2, true, "TimerHandler_HotPulse", self)
 
 	-- External windows
-	Apollo.RegisterEventHandler("CombatMode_RegisterPausingWindow", "EventHandler_RegisterPausingWindow", self)
+	Apollo.RegisterEventHandler("CombatMode_RegisterPausingWindow", "RegisterWindow", self)
 
 	-- These windows are created or re-created and must be caught with event handlers
 	-- Abilities builder
@@ -284,13 +284,13 @@ end
 
 -- Disover frames we should pause for
 local tColdWindows, tHotWindows, tWindows = {}, {}, {}
-function Lockdown:RegisterWindow(wnd)
+function Lockdown:RegisterWindow(wnd, hot)
 	if wnd then
 		local sName = wnd:GetName()
 		if not tIgnoreWindows[sName] then
 			-- Add to window index
 			if not tWindows[sName] then
-				tWindows[sName] = tHotList[sName] and "hot" or "cold"
+				tWindows[sName] = (tHotList[sName] or hot) and "hot" or "cold"
 				end
 
 			-- Add or update handle
@@ -332,11 +332,6 @@ function Lockdown:TimerHandler_DelayedFrameCatch()
 			tDelayedWindows[sName] = nil
 		end
 	end
-end
-
--- API
-function Lockdown:EventHandler_RegisterPausingWindow(wndHandle)
-	self:RegisterWindow(wndHandle)
 end
 
 -- Poll unlocking frames
