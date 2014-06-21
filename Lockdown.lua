@@ -857,6 +857,7 @@ function Lockdown:Reticle_Update()
 	self.wndReticleSpriteTarget:SetAnchorOffsets(-n + rox, -n + roy, n + rox, n + roy)
 	self.wndReticleSpriteTarget:SetOpacity(s.reticle_opacity)
 	self.wndReticleSpriteTarget:SetSprite("reticles:"..s.reticle_sprite)
+	self.wndReticleSpriteTarget:SetBGColor(CColor.new(s.reticle_shade_blue, s.reticle_shade_green, s.reticle_shade_red))
 end
 
 function Lockdown:AddReticle(name, path, size)
