@@ -212,8 +212,8 @@ function Lockdown:OnLoad()
 	self.wndReticleSpriteTarget = self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget")
 
 	-- Add reticles
-	self:AddReticle("tiny", [[Lockdown\reticles\tiny.png]], 32)
-	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 32)
+	self:AddReticle("tiny", [[Lockdown\reticles\tiny.png]], 128)
+	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 128)
 	self.wndReticle:Show(false)
 	self:Reticle_Update()
 	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_Update", self)
@@ -853,8 +853,10 @@ end
 -- Adjust reticle
 function Lockdown:Reticle_Update()
 	local s = self.settings
-	local n = self.reticles[s.reticle_sprite] / 2
-	self.wndReticleSpriteTarget:SetAnchorOffsets(-n, -n, n, n)
+	-- local n = self.reticles[s.reticle_sprite] / 2
+	local n = s.reticle_size / 2
+	local rox, roy = s.reticle_offset_x, s.reticle_offset_y
+	self.wndReticleSpriteTarget:SetAnchorOffsets(-n + rox, -n + roy, n + rox, n + roy)
 	self.wndReticleSpriteTarget:SetOpacity(s.reticle_opacity)
 	self.wndReticleSpriteTarget:SetSprite("reticles:"..s.reticle_sprite)
 end
@@ -867,7 +869,7 @@ function Lockdown:AddReticle(name, path, size)
 				x0 = 0, x2 = 0, x3 = 0, x4 = 0, x5 = size,
 				y0 = 0, y2 = 0, y3 = 0, y4 = 0, y5 = size,
 				HotSpotX = 0, HotSpotY = 0, Duration = 1.0,
-				StartColor = "white", EndColor = "white"
+				StartColor = "white", EndColor = "white", Stretchy = 1
 			}
 		}
 	}
