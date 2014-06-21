@@ -57,7 +57,8 @@ local tLocalization = {
 		togglelock = "Toggle Lockdown",
 		locktarget = "Lock/Unlock current target",
 		targetmouseover = "Target unit in reticle",
-		Widget_free_with = "Toggle Lockdown while holding..",
+		Widget_free_with = "Free cursor while holding..",
+		free_also_toggles = "Free cursor acts as toggle (Unfinished)",
 		lock_on_load = "Lock on startup",
 		ahk_cursor_center = "Center cursor on lock",
 		ahk_update_interval = "AHK update interval [ms]",
@@ -93,6 +94,7 @@ local Lockdown = {
 		free_with_shift = false,
 		free_with_ctrl = false,
 		free_with_alt = true,
+		free_also_toggles = false,
 		reticle_show = true,
 		reticle_target = true,
 		reticle_target_neutral = true,
@@ -298,7 +300,7 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	----------------------------------------------------------
 	-- Keybinds
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
-	self.timerToggleModifier = ApolloTimer.Create(0.1, true, "TimerHandler_ToggleModifier", self)
+	self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
@@ -358,14 +360,14 @@ function Lockdown:TimerHandler_DelayedFrameCatch()
 end
 
 -- Poll unlocking frames
-local bToggleModifier = false -- User toggling mouse with a modifier key
+local free_key_held = false -- User toggling mouse with a modifier key
 local tSkipWindows = {}
 local bColdSuspend, bHotSuspend = false, false
 local bActiveIntent = true
 
 local function pulse_core(self, t, csi)
 	local bWindowUnlock = false
-	if not bToggleModifier then
+	if not free_key_held then
 		local tSkipWindows = tSkipWindows
 		-- Poll windows
 		for _, wnd in pairs(t) do
@@ -684,9 +686,9 @@ function Lockdown:KeyOrModifierUpdated()
 	locktarget_key, locktarget_mod = Upvalues("locktarget_key", "locktarget_mod")
 	targetmouseover_key, targetmouseover_mod = Upvalues("targetmouseover_key", "targetmouseover_mod")
 	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
-		self.timerToggleModifier:Start()
+		self.timerFreeKeys:Start()
 	else
-		self.timerToggleModifier:Stop()
+		self.timerFreeKeys:Stop()
 	end
 end
 
@@ -763,23 +765,33 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 end
 
 -- Watch for modifiers to toggle mouselock
-function Lockdown:TimerHandler_ToggleModifier()
-	local old = bToggleModifier
-	bToggleModifier = ((self.settings.free_with_shift and Apollo.IsShiftKeyDown())
+function Lockdown:TimerHandler_FreeKeys()
+	local old = free_key_held
+	free_key_held = ((self.settings.free_with_shift and Apollo.IsShiftKeyDown())
 		or (self.settings.free_with_ctrl and Apollo.IsControlKeyDown())
 		or (self.settings.free_with_alt and Apollo.IsAltKeyDown()))
-	if not old and bToggleModifier then
-		if GameLib.IsMouseLockOn() then
-			self:SuspendActionMode()
-		else
-			self:ForceActionMode()
-		end
-	end
-	if old and not bToggleModifier then
-		if self:PollAllWindows() then
-			self:SuspendActionMode()
-		else
-			self:SetActionMode(bActiveIntent)
+
+	-- If status has changed
+	-- This now clashes with the entirely external MouselockRebind. It doesn't know if we need a relock or not and so doesn't really work with free_also_toggles
+	if old ~= free_key_held then
+		-- If we are now holding the key
+		if free_key_held then
+			-- If the mouse is already locked, suspend lock
+			if GameLib.IsMouseLockOn() then
+				self:SuspendActionMode()
+			-- If the mouse isn't locked but we want to toggle, force it
+			elseif self.settings.free_also_toggles then
+				self:ForceActionMode()
+			end
+		-- If we let go of the key and lock doesn't match intent
+		elseif GameLib.IsMouseLockOn() ~= bActiveIntent then
+			-- If we want to be locked and aren't paused otherwise
+			if bActiveIntent and not (self:PulseCore(tHotWindows) or self:PulseCore(tColdWindows, true)) then
+				self:SetActionMode(true)
+			-- If we were locked and don't intend to be locked, unlock
+			elseif not bActiveIntent then
+				self:SetActionMode(false)
+			end
 		end
 	end
 end
