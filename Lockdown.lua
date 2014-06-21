@@ -518,7 +518,7 @@ end
 function Lockdown:UpdateWidget_Slider(slider, setting)
 	local text = self.w["Text_"..setting]
 	if text then
-		text:SetText(self.settings[setting])
+		text:SetText(math.floor(self.settings[setting]*100)/100)
 	end
 end
 
