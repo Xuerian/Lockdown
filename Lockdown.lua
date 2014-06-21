@@ -158,7 +158,9 @@ function Lockdown:OnRestore(eLevel, tData)
 		local s = self.settings
 		-- Restore settings
 		for k,v in pairs(s) do
-			s[k] = tData[k]
+			if tData[k] ~= nil then
+				s[k] = tData[k]
+			end
 		end
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
