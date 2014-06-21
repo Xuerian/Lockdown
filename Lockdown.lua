@@ -38,6 +38,7 @@ local tIgnoreWindows = {
 -- Add windows to be checked at a high rate here
 local tHotList = {
 	SpaceStashInventoryForm = true,
+	InventoryBag = true,
 	ProgressLogForm = true,
 	QuestWindow = true,
 	ZoneMapFrame = true,
