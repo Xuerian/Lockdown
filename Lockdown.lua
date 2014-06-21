@@ -68,9 +68,9 @@ local tLocalization = {
 		reticle_size = "Reticle size",
 		reticle_offset_y = "Vert offset (not targeting)",
 		reticle_offset_x = "Horiz offset (not targeting)",
-		reticle_shade_red = "Reticle shade (Red)",
-		reticle_shade_green = "Reticle shade (Green)",
-		reticle_shade_blue = "Reticle shade (Blue)",
+		reticle_hue_red = "Reticle hue (Red)",
+		reticle_hue_green = "Reticle hue (Green)",
+		reticle_hue_blue = "Reticle hue (Blue)",
 	}
 }
 local L = setmetatable({}, {__index = tLocalization.en_us})
@@ -104,9 +104,9 @@ local Lockdown = {
 		reticle_sprite = "giznat",
 		reticle_offset_x = 0,
 		reticle_offset_y = -100,
-		reticle_shade_red = 1,
-		reticle_shade_blue = 1,
-		reticle_shade_green = 1,
+		reticle_hue_red = 1,
+		reticle_hue_blue = 1,
+		reticle_hue_green = 1,
 
 		ahk_lmb_key = 189, -- -
 		ahk_rmb_key = 187, -- =
@@ -455,9 +455,9 @@ ChangeHandlers.reticle_opacity = ReticleChanged
 ChangeHandlers.reticle_size = ReticleChanged
 ChangeHandlers.reticle_offset_x = ReticleChanged
 ChangeHandlers.reticle_offset_y = ReticleChanged
-ChangeHandlers.reticle_shade_red = ReticleChanged
-ChangeHandlers.reticle_shade_green = ReticleChanged
-ChangeHandlers.reticle_shade_blue = ReticleChanged
+ChangeHandlers.reticle_hue_red = ReticleChanged
+ChangeHandlers.reticle_hue_green = ReticleChanged
+ChangeHandlers.reticle_hue_blue = ReticleChanged
 ChangeHandlers.reticle_sprite = ReticleChanged
 
 -- Per category widget handlers
@@ -857,7 +857,7 @@ function Lockdown:Reticle_Update()
 	self.wndReticleSpriteTarget:SetAnchorOffsets(-n + rox, -n + roy, n + rox, n + roy)
 	self.wndReticleSpriteTarget:SetOpacity(s.reticle_opacity)
 	self.wndReticleSpriteTarget:SetSprite("reticles:"..s.reticle_sprite)
-	self.wndReticleSpriteTarget:SetBGColor(CColor.new(s.reticle_shade_blue, s.reticle_shade_green, s.reticle_shade_red))
+	self.wndReticleSpriteTarget:SetBGColor(CColor.new(s.reticle_hue_red, s.reticle_hue_green, s.reticle_hue_blue))
 end
 
 function Lockdown:AddReticle(name, path, size)
