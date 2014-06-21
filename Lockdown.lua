@@ -49,7 +49,28 @@ local tLocalization = {
 		button_configure = "Lockdown",
 		button_label_bind = "Click to change",
 		button_label_bind_wait = "Press new key",
-		button_label_mod = "Modifier"
+		button_label_mod = "Modifier",
+
+		Title_tweaks = "Tweaks",
+		mouselockrebind = "Orange settings require the .ahk script. Reload both UI and .ahk script after changing. See the Lockdown Curse page for details.",
+
+		togglelock = "Toggle Lockdown",
+		locktarget = "Lock/Unlock current target",
+		targetmouseover = "Target unit in reticle",
+		Widget_free_with = "Toggle Lockdown while holding..",
+		lock_on_load = "Lock on startup",
+		ahk_cursor_center = "Center cursor on lock",
+		ahk_update_interval = "AHK update interval [ms]",
+		reticle_target = "Reticle targeting",
+		reticle_target_delay = "Reticle target delay",
+		reticle_show = "Show reticle",
+		reticle_opacity = "Reticle opacity",
+		reticle_size = "Reticle size",
+		reticle_offset_y = "Reticle offset (Vertical)",
+		reticle_offset_x = "Reticle offset (Horizontal)",
+		reticle_shade_red = "Reticle shade (Red)",
+		reticle_shade_green = "Reticle shade (Green)",
+		reticle_shade_blue = "Reticle shade (Blue)",
 	}
 }
 local L = setmetatable({}, {__index = tLocalization.en_us})
@@ -83,6 +104,9 @@ local Lockdown = {
 		reticle_sprite = "giznat",
 		reticle_offset_x = 0,
 		reticle_offset_y = -100,
+		reticle_shade_red = 1,
+		reticle_shade_blue = 1,
+		reticle_shade_green = 1,
 
 		ahk_lmb_key = 189, -- -
 		ahk_rmb_key = 187, -- =
@@ -426,11 +450,19 @@ function ChangeHandlers.reticle_target_delay(value)
 end
 
 function ReticleChanged()
-	Lockdown.wndReticle:Show()
-	Lockdown:ReticleUpdate()
+	Lockdown.wndReticle:Show(true)
+	Lockdown:Reticle_Update()
 end
 
 ChangeHandlers.reticle_opacity = ReticleChanged
+ChangeHandlers.reticle_size = ReticleChanged
+ChangeHandlers.reticle_offset_x = ReticleChanged
+ChangeHandlers.reticle_offset_y = ReticleChanged
+ChangeHandlers.reticle_shade_red = ReticleChanged
+ChangeHandlers.reticle_shade_green = ReticleChanged
+ChangeHandlers.reticle_shade_blue = ReticleChanged
+ChangeHandlers.reticle_sprite = ReticleChanged
+
 -- Per category widget handlers
 -- Binding keys
 local tBindKeyMap = {}
@@ -540,6 +572,9 @@ function Lockdown:UpdateConfigUI()
 		-- Reference all children by name
 		self.w = children_by_name(self.wndOptions)
 		w = self.w
+
+		-- Localize strings
+		w.Text_mouselockrebind:SetText(L.mouselockrebind)
 
 		-- Options children cache
 		--[=[ 	w = setmetatable({}, {__index = function(t, k)
