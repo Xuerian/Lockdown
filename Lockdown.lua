@@ -66,8 +66,8 @@ local tLocalization = {
 		reticle_show = "Show reticle",
 		reticle_opacity = "Reticle opacity",
 		reticle_size = "Reticle size",
-		reticle_offset_y = "Reticle offset (Vertical)",
-		reticle_offset_x = "Reticle offset (Horizontal)",
+		reticle_offset_y = "Vert offset (not targeting)",
+		reticle_offset_x = "Horiz offset (not targeting)",
 		reticle_shade_red = "Reticle shade (Red)",
 		reticle_shade_green = "Reticle shade (Green)",
 		reticle_shade_blue = "Reticle shade (Blue)",
@@ -857,7 +857,6 @@ function Lockdown:Reticle_Update()
 	self.wndReticleSpriteTarget:SetAnchorOffsets(-n + rox, -n + roy, n + rox, n + roy)
 	self.wndReticleSpriteTarget:SetOpacity(s.reticle_opacity)
 	self.wndReticleSpriteTarget:SetSprite("reticles:"..s.reticle_sprite)
-	self.wndReticleSpriteTarget:SetBGColor(CColor.new(s.reticle_shade_blue, s.reticle_shade_green, s.reticle_shade_red))
 end
 
 function Lockdown:AddReticle(name, path, size)
