@@ -193,6 +193,7 @@ function Lockdown:OnRestore(eLevel, tData)
 		if tData._is_ahk_reload then
 			self:OnConfigure()
 		end
+		self:SetActionMode(s.lock_on_load)
 	end
 end
 
@@ -302,10 +303,6 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
 	self:KeyOrModifierUpdated()
-
-	if self.settings.lock_on_load then
-		self:SetActionMode(true)
-	end
 end
 
 -- Disover frames we should pause for
