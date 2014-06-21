@@ -609,10 +609,11 @@ function Lockdown:UpdateConfigUI()
 						if L[setting] then
 							if element_prefix == "Check" then
 								elem:SetText(L[setting])
-							elseif element_prefix == "Slider"
-								or element_prefix == "Key" then
+							elseif element_prefix == "Slider" then
 								w["Widget_"..setting]:SetText(L[setting])
 							end
+						 elseif element_prefix == "Key" and L[found] then
+							w["Widget_"..found]:SetText(L[found])
 						end
 					else
 						print("Element not bound", name, setting)
