@@ -366,7 +366,7 @@ local tSkipWindows = {}
 local bColdSuspend, bHotSuspend = false, false
 local bActiveIntent = true
 
-local function pulse_core(self, t, csi)
+function Lockdown:PulseCore(t, csi)
 	local bWindowUnlock = false
 	if not free_key_held then
 		local tSkipWindows = tSkipWindows
@@ -401,13 +401,13 @@ end
 
 function Lockdown:TimerHandler_ColdPulse()
 	if not bHotSuspend then
-		if pulse_core(self, tColdWindows, true) then
+		if self:PulseCore(tColdWindows, true) then
 			if not bColdSuspend then
 				bColdSuspend = true
 				self:SuspendActionMode()
 			end
 		elseif bColdSuspend then
-			if bActiveIntent and not GameLib.IsMouseLockOn() and bColdSuspend and not pulse_core(self, tHotWindows) then
+			if bActiveIntent and not GameLib.IsMouseLockOn() and bColdSuspend and not self:PulseCore(tHotWindows) then
 				bColdSuspend = false
 				self:SetActionMode(true)
 			end
@@ -417,13 +417,13 @@ end
 
 function Lockdown:TimerHandler_HotPulse()
 	if not bColdSuspend then
-		if pulse_core(self, tHotWindows) then
+		if self:PulseCore(tHotWindows) then
 			if not bHotSuspend then
 				bHotSuspend = true
 				self:SuspendActionMode()
 			end
 		elseif bHotSuspend then
-			if bActiveIntent and not GameLib.IsMouseLockOn() and bHotSuspend and not pulse_core(self, tColdWindows, true) then
+			if bActiveIntent and not GameLib.IsMouseLockOn() and bHotSuspend and not self:PulseCore(tColdWindows, true) then
 				bHotSuspend = false
 				self:SetActionMode(true)
 			end
@@ -432,8 +432,8 @@ function Lockdown:TimerHandler_HotPulse()
 end
 
 function Lockdown:PollAllWindows()
-	self:TimerHandler_ColdPulse()
 	self:TimerHandler_HotPulse()
+	self:TimerHandler_ColdPulse()
 	return bColdSuspend or bHotSuspend
 end
 
