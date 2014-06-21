@@ -637,7 +637,7 @@ function Lockdown:UpdateConfigUI()
 		-- Blunt localization
 		for k,v in pairs(w) do
 			if L[k] then
-				L[k]:SetText(L[k])
+				v:SetText(L[k])
 			end
 		end
 
