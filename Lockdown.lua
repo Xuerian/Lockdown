@@ -125,6 +125,8 @@ for k,v in pairs(Lockdown.defaults) do
 	Lockdown.settings[k] = v
 end
 
+local bActiveIntent
+
 -- Helpers
 local function print(...)
 	local out = {}
@@ -363,7 +365,6 @@ end
 local free_key_held = false -- User toggling mouse with a modifier key
 local tSkipWindows = {}
 local bColdSuspend, bHotSuspend = false, false
-local bActiveIntent = true
 
 function Lockdown:PulseCore(t, csi)
 	local bWindowUnlock = false
@@ -395,39 +396,23 @@ function Lockdown:PulseCore(t, csi)
 		end
 	end
 
+	-- Update lock
+	local lock = GameLib.IsMouseLockOn()
+	if not (bWindowUnlock or bColdSuspend or bHotSuspend or lock) and bActiveIntent then
+		self:SetActionMode(true)
+	elseif (bWindowUnlock or bColdSuspend or bHotSuspend) and lock then
+		self:SuspendActionMode()
+	end
+
 	return bWindowUnlock
 end
 
 function Lockdown:TimerHandler_ColdPulse()
-	if not bHotSuspend then
-		if self:PulseCore(tColdWindows, true) then
-			if not bColdSuspend then
-				bColdSuspend = true
-				self:SuspendActionMode()
-			end
-		elseif bColdSuspend then
-			if bActiveIntent and not GameLib.IsMouseLockOn() and bColdSuspend and not self:PulseCore(tHotWindows) then
-				bColdSuspend = false
-				self:SetActionMode(true)
-			end
-		end
-	end
+	bColdSuspend = self:PulseCore(tColdWindows, true)
 end
 
 function Lockdown:TimerHandler_HotPulse()
-	if not bColdSuspend then
-		if self:PulseCore(tHotWindows) then
-			if not bHotSuspend then
-				bHotSuspend = true
-				self:SuspendActionMode()
-			end
-		elseif bHotSuspend then
-			if bActiveIntent and not GameLib.IsMouseLockOn() and bHotSuspend and not self:PulseCore(tColdWindows, true) then
-				bHotSuspend = false
-				self:SetActionMode(true)
-			end
-		end
-	end
+	bHotSuspend = self:PulseCore(tHotWindows)
 end
 
 function Lockdown:PollAllWindows()
@@ -726,9 +711,9 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	
 	-- Static hotkeys, F7 and F8
 	elseif iKey == 118 then
-		self:SetActionMode(true)
-	elseif iKey == 119 then
-		self:SetActionMode(false)
+		self:SetActionMode(true, true)
+	elseif iKey == 119 and not free_key_held then
+		self:SetActionMode(false, true)
 
 	-- Target mouseover
 	elseif iKey == targetmouseover_key and (not targetmouseover_mod or targetmouseover_mod()) then
