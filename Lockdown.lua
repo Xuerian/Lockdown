@@ -465,6 +465,14 @@ ChangeHandlers.reticle_sprite = ReticleChanged
 -- Per category widget handlers
 -- Binding keys
 local tBindKeyMap = {}
+local function BindKeySetText(btn, setting)
+	local s = Lockdown.settings
+	if s[setting] and s[setting] ~= "" then
+		btn:SetText(SystemKeyMap[s[setting]] or "????")
+	else
+		btn:SetText()
+	end
+end
 function Lockdown:OnBindKey(btn)
 	local setting = tBindKeyMap[btn:GetName()]
 	if not self.bind_mode_active then
@@ -475,7 +483,7 @@ function Lockdown:OnBindKey(btn)
 		self.w.Btn_Unbind:Show(true)
 	elseif sWhichBind == setting then
 		self.bind_mode_active = false
-		btn:SetText(SystemKeyMap[self.settings[setting]])
+		BindKeySetText(btn, setting)
 		btn:SetCheck(false)
 		self.w.Btn_Unbind:Show(false)
 	end
@@ -651,7 +659,7 @@ function Lockdown:UpdateConfigUI()
 	-- Update key bind buttons
 	self.bind_mode_active = false
 	for name, setting in pairs(tBindKeyMap) do
-		w[name]:SetText(SystemKeyMap[s[setting]])
+		BindKeySetText(w[name], setting)
 		w[name]:SetCheck(false)
 	end
 	-- Update key modifier buttons
@@ -696,7 +704,7 @@ end
 local uLockedTarget
 function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Listen for key to bind
-	if self.bind_mode_active and SystemKeyMap[iKey] then
+	if self.bind_mode_active then
 		self.bind_mode_active = false
 		self.settings[sWhichBind] = iKey
 		self:KeyOrModifierUpdated()
@@ -972,8 +980,8 @@ SystemKeyMap = {
 	[121] = "F10",
 	[122] = "F11",
 	[123] = "F12",
-	-- [144] = "Num Lock",
-	-- [145] = "Scroll Lock",
+	[144] = "Num Lock",
+	[145] = "Scroll Lock",
 	[186] = ";",
 	[187] = "=",
 	[188] = ",",
@@ -984,7 +992,7 @@ SystemKeyMap = {
 	[219] = "[",
 	[220] = [[\]],
 	[221] = "]",
-	[222] = "'"
+	[222] = "'",
 }
 
 Lockdown:Init()
