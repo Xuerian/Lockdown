@@ -691,7 +691,7 @@ end
 local uLockedTarget
 function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Listen for key to bind
-	if self.bind_mode_active then
+	if self.bind_mode_active and iKey ~= 0xF1 and iKey ~= 0xF2 then
 		self.bind_mode_active = false
 		self.settings[sWhichBind] = iKey
 		self:KeyOrModifierUpdated()
@@ -712,9 +712,9 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		end
 	
 	-- Static hotkeys, F7 and F8
-	elseif iKey == 118 then
+	elseif iKey == 0xF1 then
 		self:SetActionMode(true, true)
-	elseif iKey == 119 and not free_key_held then
+	elseif iKey == 0xF2 and not free_key_held then
 		self:SetActionMode(false, true)
 
 	-- Target mouseover
