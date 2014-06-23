@@ -368,7 +368,7 @@ local free_key_held = false -- User toggling mouse with a modifier key
 local tSkipWindows = {}
 local bColdSuspend, bHotSuspend = false, false
 
-function Lockdown:PulseCore(t, csi)
+function Lockdown:PulseCore(t, other_suspend, csi)
 	local bWindowUnlock = false
 	if not free_key_held then
 		local tSkipWindows = tSkipWindows
@@ -396,25 +396,25 @@ function Lockdown:PulseCore(t, csi)
 				tSkipWindows.CSI = false
 			end
 		end
-	end
 
-	-- Update lock
-	local lock = GameLib.IsMouseLockOn()
-	if not (bWindowUnlock or bColdSuspend or bHotSuspend or lock) and bActiveIntent then
-		self:SetActionMode(true)
-	elseif (bWindowUnlock or bColdSuspend or bHotSuspend) and lock then
-		self:SuspendActionMode()
+		-- Update lock
+		local lock = GameLib.IsMouseLockOn()
+		if not (bWindowUnlock or other_suspend or lock) and bActiveIntent then
+			self:SetActionMode(true)
+		elseif (bWindowUnlock or other_suspend) and lock then
+			self:SuspendActionMode()
+		end
 	end
 
 	return bWindowUnlock
 end
 
 function Lockdown:TimerHandler_ColdPulse()
-	bColdSuspend = self:PulseCore(tColdWindows, true)
+	bColdSuspend = self:PulseCore(tColdWindows, bHotSuspend, true)
 end
 
 function Lockdown:TimerHandler_HotPulse()
-	bHotSuspend = self:PulseCore(tHotWindows)
+	bHotSuspend = self:PulseCore(tHotWindows, bColdSuspend)
 end
 
 function Lockdown:PollAllWindows()
