@@ -42,6 +42,8 @@ local tHotList = {
 	ProgressLogForm = true,
 	QuestWindow = true,
 	ZoneMapFrame = true,
+	QuestWindow_Metal = true,
+	QuestWindow_Holo = true,
 }
 
 -- Localization
