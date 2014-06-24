@@ -455,6 +455,7 @@ ChangeHandlers.reticle_sprite = ReticleChanged
 -- Per category widget handlers
 -- Binding keys
 local tBindKeyMap = {}
+local sWhichBind
 local function BindKeySetText(btn, setting)
 	local s = Lockdown.settings
 	if s[setting] and s[setting] ~= "" then
