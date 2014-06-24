@@ -32,7 +32,10 @@ local tIgnoreWindows = {
 	ProcsIcon2 = true,
 	ProcsIcon3 = true,
 	LootNotificationForm = true,
+	-- Clairvoyance mod, whose windows are all escapable for no good reason
 	ClairvoyanceNotification = true,
+	DisorientWindow = true,
+	WeaponIndicator = true,
 }
 
 -- Add windows to be checked at a high rate here
