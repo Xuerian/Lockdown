@@ -667,7 +667,7 @@ function Lockdown:UpdateConfigUI()
 end
 
 -- Store key and modifier check function
-local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, targetmousover_key, targetmouseover_mod
+local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, targetmouseover_key, targetmouseover_mod
 local function Upvalues(whichkey, whichmod)
 	local mod = Lockdown.settings[whichmod]
 	if mod == "shift" then
