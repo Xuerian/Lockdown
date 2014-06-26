@@ -25,17 +25,21 @@ local tAdditionalWindows = {
 
 -- Add windows to ignore here
 local tIgnoreWindows = {
+	-- Floating text panes
 	StoryPanelInformational = true,
 	StoryPanelBubble = true,
 	StoryPanelBubbleCenter = true,
+	-- ProcsHUD
 	ProcsIcon1 = true,
 	ProcsIcon2 = true,
 	ProcsIcon3 = true,
+	-- ?
 	LootNotificationForm = true,
 	-- Clairvoyance mod, whose windows are all escapable for no good reason
 	ClairvoyanceNotification = true,
 	DisorientWindow = true,
 	WeaponIndicator = true,
+	-- Killing blow mod
 	KillingBlowAlert = true,
 }
 
@@ -315,6 +319,9 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:KeyOrModifierUpdated()
 end
 
+----------------------------------------------------------
+-- Frame discovery, handling, and polling
+
 -- Disover frames we should pause for
 local tColdWindows, tHotWindows, tWindows = {}, {}, {}
 function Lockdown:RegisterWindow(wnd, hot)
@@ -430,6 +437,9 @@ end
 function Lockdown:TimerHandler_Relock()
 	self:SetActionMode(true)
 end
+
+----------------------------------------------------------
+-- Configuration
 
 -- Specific setting change handlers
 -- CAN'T TAKE THE CHANGE, MAN
@@ -667,6 +677,9 @@ function Lockdown:UpdateConfigUI()
 	self.w.Btn_Unbind:Show(false)
 end
 
+----------------------------------------------------------
+-- Keybind handling
+
 -- Store key and modifier check function
 local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, targetmouseover_key, targetmouseover_mod
 local function Upvalues(whichkey, whichmod)
@@ -796,6 +809,8 @@ function Lockdown:TimerHandler_FreeKeys()
 	end
 end
 
+----------------------------------------------------------
+-- Mouseover targeting
 
 -- Targeting
 local uLastMouseover
@@ -828,6 +843,9 @@ function Lockdown:EventHandler_TargetUnitChanged()
 	uLockedTarget = nil
 end
 
+----------------------------------------------------------
+-- Mode setters
+
 -- Action mode toggle
 function Lockdown:SetActionMode(bState)
 	bActiveIntent = bState
@@ -859,6 +877,9 @@ function Lockdown:SuspendActionMode()
 	end
 	-- TODO: Indicate active-but-suspended status
 end
+
+----------------------------------------------------------
+-- Reticles
 
 -- Adjust reticle
 function Lockdown:Reticle_Update()
