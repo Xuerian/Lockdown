@@ -36,6 +36,7 @@ local tIgnoreWindows = {
 	ClairvoyanceNotification = true,
 	DisorientWindow = true,
 	WeaponIndicator = true,
+	KillingBlowAlert = true,
 }
 
 -- Add windows to be checked at a high rate here
