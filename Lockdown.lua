@@ -156,6 +156,7 @@ end
 -- Startup
 function Lockdown:Init()
 	Apollo.RegisterAddon(self, true, L.button_configure)
+	Apollo.RegisterEventHandler("UnitCreated", "PreloadHandler_UnitCreated", self)
 end
 
 -- Register a window update for a given event
@@ -220,10 +221,12 @@ local function children_by_name(wnd, t)
 	return t
 end
 
+local preload_units = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
-	self.wndReticle = Apollo.LoadForm("Lockdown.xml", "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
+	self.xmlDoc = XmlDoc.CreateFromFile("Lockdown.xml")
+	self.wndReticle = Apollo.LoadForm(self.xmlDoc, "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
 	self.wndReticleSpriteTarget = self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget")
 
 	-- Add reticles
@@ -317,6 +320,92 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
 	self:KeyOrModifierUpdated()
+
+	----------------------------------------------------------
+	-- Units and Advanced Targeting
+	Apollo.RemoveEventHandler("UnitCreated", self)
+	Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
+	Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
+	Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
+
+	self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
+	self.timerHAL:Stop()
+
+	for i,v in ipairs(preload_units) do
+		self:EventHandler_UnitCreated(v)
+	end
+	preload_units = nil
+end
+
+----------------------------------------------------------
+-- Units and Advanced Targeting
+function Lockdown:PreloadHandler_UnitCreated(unit)
+	table.insert(preload_units, unit)
+end
+
+local markers = {}
+local onscreen = {}
+-- Store category of marker
+function Lockdown:EventHandler_UnitCreated(unit)
+	local id = unit:GetId()
+	-- Invalid or existing markers
+	if not id or markers[id] then return nil end
+	local utype = unit:GetType()
+	-- Players
+	if utype == "Player"
+		-- Harvestable nodes (Except farming)
+		or (utype == "Harvest" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()) and unit:GetHarvestRequiredTradeskillName() ~= "Farmer")
+		-- NPCs that get namemarkers
+		or (utype == "NonPlayer" and unit:ShouldShowNamePlate()) then
+		local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
+		-- Activate marker
+		marker:SetData(unit)
+		marker:SetUnit(unit)
+		markers[id] = marker
+	end
+end
+
+function Lockdown:EventHandler_UnitDestroyed(unit)
+	local id = unit:GetId()
+	if markers[id] then
+		markers[id]:Destroy()
+		markers[id] = nil
+	end
+	if onscreen[id] then
+		onscreen[id] = nil
+	end
+end
+
+function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
+	local unit = ctrl:GetData()
+	if unit:IsValid() then
+		onscreen[unit:GetId()] = visible and unit or nil
+	else
+		self:UnitDestroyed(unit)
+	end
+end
+
+-- Scan lists of markers in order of priority based on current state
+ -- If reticle center within range of unit center (reticle size vs estimated object size)
+ -- If object meets criteria (Node range, ally health)
+local reticle_point, reticle_radius
+function Lockdown:TimerHandler_HAL()
+	local reticle_point = reticle_point
+	-- wipe(HALset)
+	for id, unit in pairs(onscreen) do
+		local pos = GameLib.GetUnitScreenPosition(unit)
+		if pos then
+			local y = pos.nY
+			local radius = (y - unit:GetOverheadAnchor().y)/2
+			local dist = (Vector2.New(pos.nX, y - radius) - reticle_point):Length()
+			if dist < (radius + reticle_radius) then
+				if GameLib.GetTargetUnit() ~= unit and not unit:IsOccluded() then
+					GameLib.SetTargetUnit(unit)
+				end
+				return
+			end
+		end
+	end
 end
 
 ----------------------------------------------------------
@@ -852,7 +941,10 @@ function Lockdown:SetActionMode(bState)
 	if GameLib.IsMouseLockOn() ~= bState then
 		GameLib.SetMouseLock(bState)
 	end
-	if not bState then
+	if bState then
+		self.timerHAL:Start()
+	else
+		self.timerHAL:Stop()
 		bHotSuspend = false
 		bColdSuspend = false
 	end
@@ -865,6 +957,7 @@ function Lockdown:ForceActionMode()
 	if not GameLib.IsMouseLockOn() then
 		GameLib.SetMouseLock(true)
 		self.wndReticle:Show(true)
+		self.timerHAL:Start()
 	end
 	-- TODO: Indicate inactive-but-enabled status
 end
@@ -874,6 +967,7 @@ function Lockdown:SuspendActionMode()
 	if GameLib.IsMouseLockOn() then
 		GameLib.SetMouseLock(false)
 		self.wndReticle:Show(false)
+		self.timerHAL:Stop()
 	end
 	-- TODO: Indicate active-but-suspended status
 end
@@ -891,6 +985,11 @@ function Lockdown:Reticle_Update()
 	self.wndReticleSpriteTarget:SetOpacity(s.reticle_opacity)
 	self.wndReticleSpriteTarget:SetSprite("reticles:"..s.reticle_sprite)
 	self.wndReticleSpriteTarget:SetBGColor(CColor.new(s.reticle_hue_red, s.reticle_hue_green, s.reticle_hue_blue))
+
+	local size = Apollo.GetDisplaySize()
+	local ret_x, ret_y = size.nWidth/2 + rox, size.nHeight/2 + roy
+	reticle_point = Vector2.New(ret_x, ret_y)
+	reticle_radius = n
 end
 
 function Lockdown:AddReticle(name, path, size)

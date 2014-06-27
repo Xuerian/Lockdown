@@ -141,4 +141,7 @@
             </Control>
         </Control>
     </Form>
+    <Form Class="WorldFixedWindow" LAnchorPoint="SELF" LAnchorOffset="0" TAnchorPoint="SELF" TAnchorOffset="0" RAnchorPoint="SELF" RAnchorOffset="0" BAnchorPoint="SELF" BAnchorOffset="0" RelativeToClient="1" Font="CRB_InterfaceLarge_BBO" Text="" TooltipType="OnCursor" Template="Default" Border="0" Picture="1" SwallowMouseClicks="1" Moveable="0" Escapable="0" Overlapped="1" BGColor="44ffffff" TextColor="ffffffff" IgnoreMouse="1" Visible="0" TransitionShowHide="0" Name="Lockdown_Marker" TooltipColor="" Tooltip="" Sprite="" TextId="" AutoScaleTextOff="0" DT_CENTER="0" DT_VCENTER="0" NoClip="0">
+        <Event Name="WorldLocationOnScreen" Function="EventHandler_WorldLocationOnScreen"/>
+    </Form>
 </Forms>
