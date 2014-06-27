@@ -349,7 +349,7 @@ local onscreen = {}
 function Lockdown:EventHandler_UnitCreated(unit)
 	local id = unit:GetId()
 	-- Invalid or existing markers
-	if not id or markers[id] then return nil end
+	if not id or markers[id] or unit == GameLib.GetPlayerUnit() then return nil end
 	local utype = unit:GetType()
 	-- Players
 	if utype == "Player"
