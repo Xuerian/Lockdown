@@ -322,23 +322,32 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:KeyOrModifierUpdated()
 
 	----------------------------------------------------------
-	-- Units and Advanced Targeting
-	Apollo.RemoveEventHandler("UnitCreated", self)
-	Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
-	Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
-	Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
-
-	self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
-	self.timerHAL:Stop()
-
-	for i,v in ipairs(preload_units) do
-		self:EventHandler_UnitCreated(v)
-	end
-	preload_units = nil
+	-- Defer advanced targeting startup
+	self.timerATStartup = ApolloTimer.Create(0.1, true, "TimerHandler_ATStartup", self)
 end
+
 
 ----------------------------------------------------------
 -- Units and Advanced Targeting
+function Lockdown:TimerHandler_ATStartup()
+	local player = GameLib.GetPlayerUnit()
+	if player and player:IsValid() then
+		self.timerATStartup:Stop()
+		Apollo.RemoveEventHandler("UnitCreated", self)
+		Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
+		Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
+		Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
+
+		self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
+		self.timerHAL:Stop()
+
+		for i,v in ipairs(preload_units) do
+			self:EventHandler_UnitCreated(v)
+		end
+		preload_units = nil
+	end
+end
+
 function Lockdown:PreloadHandler_UnitCreated(unit)
 	table.insert(preload_units, unit)
 end
@@ -349,10 +358,10 @@ local onscreen = {}
 function Lockdown:EventHandler_UnitCreated(unit)
 	local id = unit:GetId()
 	-- Invalid or existing markers
-	if not id or markers[id] or unit == GameLib.GetPlayerUnit() then return nil end
+	if not id or markers[id] then return nil end
 	local utype = unit:GetType()
 	-- Players
-	if utype == "Player"
+	if (utype == "Player" and unit ~= GameLib.GetPlayerUnit())
 		-- Harvestable nodes (Except farming)
 		or (utype == "Harvest" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()) and unit:GetHarvestRequiredTradeskillName() ~= "Farmer")
 		-- NPCs that get namemarkers
