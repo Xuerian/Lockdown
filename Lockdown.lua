@@ -232,8 +232,8 @@ function Lockdown:OnLoad()
 	-- Add reticles
 	self:AddReticle("tiny", [[Lockdown\reticles\tiny.png]], 128)
 	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 128)
-	self.wndReticle:Show(false)
 	self:Reticle_Update()
+	self.wndReticle:Show(GameLib.IsMouseLockOn())
 	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_Update", self)
 
 	-- For some reason on reloadui, the mouse locks in the NE screen quadrant
