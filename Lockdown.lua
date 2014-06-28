@@ -3,6 +3,10 @@
 
 -- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful.
 
+
+----------------------------------------------------------
+-- Window lists
+
 -- Add windows that don't close on escape here
 -- Many Carbine windows must be caught via event handlers
 -- since they get recreated and handles go stale. 
@@ -54,7 +58,10 @@ local tHotList = {
 	QuestWindow_Holo = true,
 }
 
+
+----------------------------------------------------------
 -- Localization
+
 local tLocalization = {
 	en_us = {
 		button_configure = "Lockdown",
@@ -91,6 +98,11 @@ local L = setmetatable({}, {__index = tLocalization.en_us})
 -- I don't even know who this is from
 -- Three different mods have three different versions
 local SystemKeyMap
+local bActiveIntent
+
+
+----------------------------------------------------------
+-- Settings
 
 -- Defaults
 local Lockdown = {
@@ -135,7 +147,6 @@ for k,v in pairs(Lockdown.defaults) do
 	Lockdown.settings[k] = v
 end
 
-local bActiveIntent
 
 -- Helpers
 local function print(...)
@@ -153,11 +164,18 @@ local function wipe(t)
 	end
 end
 
--- Startup
+
+----------------------------------------------------------
+-- Because Carbine does it
+
 function Lockdown:Init()
 	Apollo.RegisterAddon(self, true, L.button_configure)
 	Apollo.RegisterEventHandler("UnitCreated", "PreloadHandler_UnitCreated", self)
 end
+
+
+----------------------------------------------------------
+-- Easy event handlers
 
 -- Register a window update for a given event
 function Lockdown:AddWindowEventListener(sEvent, sName)
@@ -181,6 +199,10 @@ function Lockdown:AddDelayedWindowEventListener(sEvent, sName)
 		Lockdown.timerDelayedFrameCatch:Start()
 	end
 end
+
+
+----------------------------------------------------------
+-- Saved data
 
 function Lockdown:OnSave(eLevel)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.General then
@@ -225,6 +247,7 @@ local preload_units = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
+
 	self.xmlDoc = XmlDoc.CreateFromFile("Lockdown.xml")
 	self.wndReticle = Apollo.LoadForm(self.xmlDoc, "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
 	self.wndReticleSpriteTarget = self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget")
@@ -239,19 +262,23 @@ function Lockdown:OnLoad()
 	-- For some reason on reloadui, the mouse locks in the NE screen quadrant
 	ApolloTimer.Create(0.7, false, "TimerHandler_InitialLock", self)
 
+
 	----------------------------------------------------------
 	-- Options
 	Apollo.RegisterSlashCommand("lockdown", "OnConfigure", self)
 
+
 	----------------------------------------------------------
 	-- Targeting
 	-- TODO: Only do this when settings.reticle_target is on
+
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
 	Apollo.RegisterEventHandler("TargetUnitChanged", "EventHandler_TargetUnitChanged", self)
 self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerRelock:Stop()
 	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
 	self.timerDelayedTarget:Stop()
+
 
 	----------------------------------------------------------
 	-- Automatic [un]locking
@@ -269,7 +296,10 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerColdPulse = ApolloTimer.Create(0.5, true, "TimerHandler_ColdPulse", self)
 	self.timerHotPulse = ApolloTimer.Create(0.2, true, "TimerHandler_HotPulse", self)
 
-	-- External windows
+
+	----------------------------------------------------------
+	-- Windows and their relevant events
+
 	Apollo.RegisterEventHandler("CombatMode_RegisterPausingWindow", "RegisterWindow", self)
 
 	-- These windows are created or re-created and must be caught with event handlers
@@ -312,8 +342,10 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:AddDelayedWindowEventListener("ShowBank", "BankViewerForm")
 	self:AddDelayedWindowEventListener("ToggleBank", "BankViewerForm")
 	
+
 	----------------------------------------------------------
 	-- Keybinds
+
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
 	self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
 
@@ -321,8 +353,10 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Oh my
 	self:KeyOrModifierUpdated()
 
+
 	----------------------------------------------------------
 	-- Defer advanced targeting startup
+
 	self.timerATStartup = ApolloTimer.Create(0.1, true, "TimerHandler_ATStartup", self)
 end
 
@@ -416,6 +450,7 @@ function Lockdown:TimerHandler_HAL()
 		end
 	end
 end
+
 
 ----------------------------------------------------------
 -- Frame discovery, handling, and polling
@@ -535,6 +570,7 @@ end
 function Lockdown:TimerHandler_Relock()
 	self:SetActionMode(true)
 end
+
 
 ----------------------------------------------------------
 -- Configuration
@@ -775,6 +811,7 @@ function Lockdown:UpdateConfigUI()
 	self.w.Btn_Unbind:Show(false)
 end
 
+
 ----------------------------------------------------------
 -- Keybind handling
 
@@ -907,6 +944,7 @@ function Lockdown:TimerHandler_FreeKeys()
 	end
 end
 
+
 ----------------------------------------------------------
 -- Mouseover targeting
 
@@ -940,6 +978,7 @@ end
 function Lockdown:EventHandler_TargetUnitChanged()
 	uLockedTarget = nil
 end
+
 
 ----------------------------------------------------------
 -- Mode setters
@@ -980,6 +1019,7 @@ function Lockdown:SuspendActionMode()
 	end
 	-- TODO: Indicate active-but-suspended status
 end
+
 
 ----------------------------------------------------------
 -- Reticles
