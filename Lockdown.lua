@@ -423,29 +423,59 @@ end
 
 local markers = {}
 local onscreen = {}
+local markers_by_type = {
+	Player = {},
+	Mount = {},
+	Harvest = {},
+	NonPlayer = {},
+}
+local mount_players = {}
 -- Store category of marker
+-- TODO: Mount events, swap player plates to mount and back. See: InfoPlates
+local function GetMountedPlayer(mount)
+	for k,v in pairs(markers_by_type.Player) do
+		local vUnit = GameLib.GetUnitById(k)
+		if vUnit:IsMounted() and mount == vUnit:GetUnitMount() then
+			return k
+		end
+	end
+end
+
 function Lockdown:EventHandler_UnitCreated(unit)
 	local id = unit:GetId()
 	-- Invalid or existing markers
 	if not id or markers[id] then return nil end
 	local utype = unit:GetType()
-	-- Players
-	if (utype == "Player" and unit ~= GameLib.GetPlayerUnit())
+	-- Players (Except Player)
+	local player = GameLib.GetPlayerUnit()
+	if (utype == "Player" and not unit:IsThePlayer())
+		-- Mounts (Except Player's)
+		or (utype == "Mount" and not (player:IsMounted() and unit == GameLib.GetPlayerUnit():GetUnitMount()))
 		-- Harvestable nodes (Except farming)
-		or (utype == "Harvest" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()) and unit:GetHarvestRequiredTradeskillName() ~= "Farmer")
+		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()))
 		-- NPCs that get namemarkers
 		or (utype == "NonPlayer" and unit:ShouldShowNamePlate()) then
-		local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
+		-- Store mount lookup since we don't have :GetUnitMounted()
+		if utype == "Mount" then
+			mount_players[id] = GetMountedPlayer(unit)
+		end
 		-- Activate marker
+		local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
 		marker:SetData(unit)
 		marker:SetUnit(unit)
 		markers[id] = marker
+		markers_by_type[utype][id] = marker
+
+	elseif utype ~= "NonPlayer" then
+		-- print(utype, unit:GetName(), unit:GetMouseOverType())
 	end
 end
 
 function Lockdown:EventHandler_UnitDestroyed(unit)
 	local id = unit:GetId()
 	if markers[id] then
+		mount_players[id] = nil
+		markers_by_type[unit:GetType()][id] = nil
 		markers[id]:Destroy()
 		markers[id] = nil
 	end
@@ -468,17 +498,37 @@ end
  -- If object meets criteria (Node range, ally health)
 local reticle_point, reticle_radius
 function Lockdown:TimerHandler_HAL()
-	local reticle_point = reticle_point
+	local reticle_point, NewVector = reticle_point, Vector2.New
 	-- wipe(HALset)
 	for id, unit in pairs(onscreen) do
 		local pos = GameLib.GetUnitScreenPosition(unit)
 		if pos then
-			local y = pos.nY
-			local radius = (y - unit:GetOverheadAnchor().y)/2
-			local dist = (Vector2.New(pos.nX, y - radius) - reticle_point):Length()
-			if dist < (radius + reticle_radius) then
-				if GameLib.GetTargetUnit() ~= unit and not unit:IsOccluded() then
+			-- Try to place point in middle of unit
+			local overhead, unit_radius, unit_point = unit:GetOverheadAnchor(), 0
+			if overhead then
+				unit_radius = (pos.nY - overhead.y)/2
+				unit_point = NewVector(pos.nX, pos.nY - unit_radius)
+			else -- Default to bottom of unit
+				unit_point = NewVector(pos.nX, pos.nY)
+			end
+			if (unit_point - reticle_point):Length() < (unit_radius + reticle_radius) then
+				-- Switch to mounted unit
+				if unit:GetType() == "Mount" then
+					if not mount_players[id] then
+						local mounted = GetMountedPlayer(unit)
+						if mounted then
+							mount_players[id] = mounted
+						else
+							print("Could not determine mount", unit:GetName())
+							break
+						end
+					end
+					unit = mount_players[id]
+				end
+				-- Target
+				if GameLib.GetTargetUnit() ~= unit then
 					GameLib.SetTargetUnit(unit)
+					print("Setting Target", unit:GetName())
 				end
 				return
 			end
