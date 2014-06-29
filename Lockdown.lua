@@ -148,14 +148,43 @@ for k,v in pairs(Lockdown.defaults) do
 end
 
 
--- Helpers
-local function print(...)
-	local out = {}
-	for i=1,select('#', ...) do
-		table.insert(out, tostring(select(i, ...)))
+----------------------------------------------------------
+-- TinyAsync, because WildStar
+
+local TinyAsync = { timers = {} }
+function TinyAsync:Wait(fCondition, fAction)
+	local i = #self
+	self.timers[i] = ApolloTimer.Create(0.1, true, "Timer_"..i, self)
+	self["Timer_"..i] = function()
+		if fCondition() then
+			self.timers[i]:Stop()
+			fAction()
+		end
 	end
-	Print(table.concat(out, ", "))
+	return i
 end
+
+
+----------------------------------------------------------
+-- I want my print(), and I want my print() whenitwillactuallywork!
+
+local print_buffer = {}
+local function print(...)
+	table.insert(print_buffer, {...})
+end
+
+TinyAsync:Wait(function() return ChatAddon and ChatAddon.tWindow end, function()
+	function print(...)
+		local out = {}
+		for i=1,select('#', ...) do
+			table.insert(out, tostring(select(i, ...)))
+		end
+		Print(table.concat(out, ", "))
+	end
+	for i,v in ipairs(print_buffer) do
+		print(unpack(v))
+	end
+end)
 
 -- Wipe a table for reuse
 local function wipe(t)
