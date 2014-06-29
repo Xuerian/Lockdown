@@ -387,23 +387,29 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	-- Defer advanced targeting startup
 
 	self.timerATStartup = ApolloTimer.Create(0.1, true, "TimerHandler_ATStartup", self)
+	self.timerHAL = ApolloTimer.Create(99, true, "TimerHandler_HAL", self)
+	self.timerHAL:Stop()
 end
 
 
 ----------------------------------------------------------
 -- Units and Advanced Targeting
+
 function Lockdown:TimerHandler_ATStartup()
 	local player = GameLib.GetPlayerUnit()
 	if player and player:IsValid() then
 		self.timerATStartup:Stop()
+		-- Update event registration
 		Apollo.RemoveEventHandler("UnitCreated", self)
 		Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
 		Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
 		Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
-
-		self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
-		self.timerHAL:Stop()
-
+		-- "Enable" timer
+		self.timerHAL:Set(0.05, true)
+		if GameLib.IsMouseLockOn() then
+			self.timerHAL:Start()
+		end
+		-- Process pre-load units
 		for i,v in ipairs(preload_units) do
 			self:EventHandler_UnitCreated(v)
 		end
