@@ -214,12 +214,14 @@ local function children_by_name(wnd, t)
 	return t
 end
 
+
 ----------------------------------------------------------
 -- Because Carbine does it
 
 function Lockdown:Init()
 	Apollo.RegisterAddon(self, true, L.button_configure)
 	Apollo.RegisterEventHandler("UnitCreated", "PreloadHandler_UnitCreated", self)
+	Apollo.RegisterEventHandler("CombatLogMount", "EventHandler_CombatLogMount", self)
 end
 
 
@@ -437,7 +439,7 @@ local markers_by_type = {
 	Harvest = {},
 	NonPlayer = {},
 }
-local mount_players = {}
+local mounts = {}
 -- Store category of marker
 -- TODO: Mount events, swap player plates to mount and back. See: InfoPlates
 local function GetMountedPlayer(mount)
@@ -465,7 +467,7 @@ function Lockdown:EventHandler_UnitCreated(unit)
 		or (utype == "NonPlayer" and unit:ShouldShowNamePlate()) then
 		-- Store mount lookup since we don't have :GetUnitMounted()
 		if utype == "Mount" then
-			mount_players[id] = GetMountedPlayer(unit)
+			mounts[id] = GetMountedPlayer(unit)
 		end
 		-- Activate marker
 		local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
@@ -482,7 +484,7 @@ end
 function Lockdown:EventHandler_UnitDestroyed(unit)
 	local id = unit:GetId()
 	if markers[id] then
-		mount_players[id] = nil
+		mounts[id] = nil
 		markers_by_type[unit:GetType()][id] = nil
 		markers[id]:Destroy()
 		markers[id] = nil
@@ -498,6 +500,12 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
 		onscreen[unit:GetId()] = visible and unit or nil
 	else
 		self:UnitDestroyed(unit)
+	end
+end
+
+function Lockdown:EventHandler_CombatLogMount(tEventArgs)
+	if not tEventArgs.bDismounted then
+		mounts[tEventArgs.unitCaster:GetUnitMount()] = tEventArgs.unitCaster
 	end
 end
 
@@ -521,17 +529,8 @@ function Lockdown:TimerHandler_HAL()
 			end
 			if (unit_point - reticle_point):Length() < (unit_radius + reticle_radius) then
 				-- Switch to mounted unit
-				if unit:GetType() == "Mount" then
-					if not mount_players[id] then
-						local mounted = GetMountedPlayer(unit)
-						if mounted then
-							mount_players[id] = mounted
-						else
-							print("Could not determine mount", unit:GetName())
-							break
-						end
-					end
-					unit = mount_players[id]
+				if unit:GetType() == "Mount" and mounts[id] then
+					unit = mounts[id]
 				end
 				-- Target
 				if GameLib.GetTargetUnit() ~= unit then
