@@ -513,6 +513,7 @@ end
  -- If reticle center within range of unit center (reticle size vs estimated object size)
  -- If object meets criteria (Node range, ally health)
 local reticle_point, reticle_radius
+local last_target, last_target_clock
 function Lockdown:TimerHandler_HAL()
 	local reticle_point, NewVector, VectorLength = reticle_point, Vector2.New, reticle_point.Length
 	-- wipe(HALset)
@@ -533,9 +534,13 @@ function Lockdown:TimerHandler_HAL()
 					unit = mounts[id]
 				end
 				-- Target
-				if GameLib.GetTargetUnit() ~= unit then
+				if GameLib.GetTargetUnit() ~= unit and (last_target ~= unit or (last_target_clock and os.time() - last_target_clock > 5)) then
 					GameLib.SetTargetUnit(unit)
-					print("Setting Target", unit:GetName())
+					if last_target == unit then
+						-- print(unit:GetName(), unit:IsOccluded())
+					end
+					last_target, last_target_clock = unit, os.clock()
+					-- print("Setting Target", unit:GetName())
 				end
 				return
 			end
