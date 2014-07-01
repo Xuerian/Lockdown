@@ -518,7 +518,7 @@ function Lockdown:TimerHandler_HAL()
 	-- wipe(HALset)
 	for id, unit in pairs(onscreen) do
 		local pos = GameLib.GetUnitScreenPosition(unit)
-		if pos then
+		if pos and pos.bOnScreen then
 			-- Try to place point in middle of unit
 			local overhead, unit_radius, unit_point = unit:GetOverheadAnchor(), 0
 			if overhead then
