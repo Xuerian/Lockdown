@@ -514,7 +514,7 @@ end
  -- If object meets criteria (Node range, ally health)
 local reticle_point, reticle_radius
 function Lockdown:TimerHandler_HAL()
-	local reticle_point, NewVector = reticle_point, Vector2.New
+	local reticle_point, NewVector, VectorLength = reticle_point, Vector2.New, reticle_point.Length
 	-- wipe(HALset)
 	for id, unit in pairs(onscreen) do
 		local pos = GameLib.GetUnitScreenPosition(unit)
@@ -527,7 +527,7 @@ function Lockdown:TimerHandler_HAL()
 			else -- Default to bottom of unit
 				unit_point = NewVector(pos.nX, pos.nY)
 			end
-			if (unit_point - reticle_point):Length() < (unit_radius + reticle_radius) then
+			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) then
 				-- Switch to mounted unit
 				if unit:GetType() == "Mount" and mounts[id] then
 					unit = mounts[id]
