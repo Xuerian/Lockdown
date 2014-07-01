@@ -186,6 +186,10 @@ TinyAsync:Wait(function() return ChatAddon and ChatAddon.tWindow end, function()
 	end
 end)
 
+
+----------------------------------------------------------
+-- Helpers
+
 -- Wipe a table for reuse
 local function wipe(t)
 	for k,v in pairs(t) do
@@ -193,6 +197,15 @@ local function wipe(t)
 	end
 end
 
+-- Load all form elements into a table by name
+local function children_by_name(wnd, t)
+	local t = t or {}
+	for _,child in ipairs(wnd:GetChildren()) do
+		t[child:GetName()] = child
+		children_by_name(child, t)
+	end
+	return t
+end
 
 ----------------------------------------------------------
 -- Because Carbine does it
@@ -263,15 +276,6 @@ function Lockdown:OnRestore(eLevel, tData)
 	end
 end
 
-local function children_by_name(wnd, t)
-	local t = t or {}
-	for _,child in ipairs(wnd:GetChildren()) do
-		t[child:GetName()] = child
-		children_by_name(child, t)
-	end
-	return t
-end
-
 local preload_units = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
@@ -288,9 +292,6 @@ function Lockdown:OnLoad()
 	self.wndReticle:Show(GameLib.IsMouseLockOn())
 	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_Update", self)
 
-	-- For some reason on reloadui, the mouse locks in the NE screen quadrant
-	ApolloTimer.Create(0.7, false, "TimerHandler_InitialLock", self)
-
 
 	----------------------------------------------------------
 	-- Options
@@ -303,7 +304,7 @@ function Lockdown:OnLoad()
 
 	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
 	Apollo.RegisterEventHandler("TargetUnitChanged", "EventHandler_TargetUnitChanged", self)
-self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
+	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerRelock:Stop()
 	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
 	self.timerDelayedTarget:Stop()
