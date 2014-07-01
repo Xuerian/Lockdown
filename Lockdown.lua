@@ -186,10 +186,12 @@ TinyAsync:Wait(function() return ChatAddon and ChatAddon.tWindow end, function()
 		end
 		Print(table.concat(out, ", "))
 	end
+	-- Process and clear buffer
 	for i,v in ipairs(print_buffer) do
 		print(unpack(v))
 	end
-end)
+	print_buffer = nil
+end, 1)
 
 
 ----------------------------------------------------------
