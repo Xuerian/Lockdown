@@ -438,6 +438,7 @@ local markers_by_type = {
 	Mount = {},
 	Harvest = {},
 	NonPlayer = {},
+	Turret = {},
 }
 local mounts = {}
 -- Store category of marker
