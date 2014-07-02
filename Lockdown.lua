@@ -499,7 +499,7 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
 	if unit:IsValid() then
 		onscreen[unit:GetId()] = visible and unit or nil
 	else
-		self:UnitDestroyed(unit)
+		self:EventHandler_UnitDestroyed(unit)
 	end
 end
 
