@@ -508,8 +508,8 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
 end
 
 function Lockdown:EventHandler_CombatLogMount(tEventArgs)
-	if not tEventArgs.bDismounted then
-		mounts[tEventArgs.unitCaster:GetUnitMount()] = tEventArgs.unitCaster
+	if not tEventArgs.bDismounted and not tEventArgs.unitCaster:IsThePlayer() then
+		mounts[tEventArgs.unitTarget:GetId()] = tEventArgs.unitCaster
 	end
 end
 
