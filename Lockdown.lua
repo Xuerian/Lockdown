@@ -539,7 +539,7 @@ function Lockdown:TimerHandler_HAL()
 					-- print(unit:GetName(), unit:IsOccluded())
 				end
 				-- Target
-				if GameLib.GetTargetUnit() ~= unit and (last_target ~= unit or (last_target_clock and os.time() - last_target_clock > 5)) then
+				if GameLib.GetTargetUnit() ~= unit and (last_target ~= unit or (os.clock() - last_target_clock) > 15) then
 					GameLib.SetTargetUnit(unit)
 					last_target, last_target_clock = unit, os.clock()
 					-- print("Setting Target", unit:GetName())
