@@ -464,7 +464,7 @@ function Lockdown:EventHandler_UnitCreated(unit)
 		-- Harvestable nodes (Except farming)
 		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()))
 		-- NPCs that get namemarkers
-		or (utype == "NonPlayer" and unit:ShouldShowNamePlate()) then
+		or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate()) then
 		-- Store mount lookup since we don't have :GetUnitMounted()
 		if utype == "Mount" then
 			mounts[id] = GetMountedPlayer(unit)
