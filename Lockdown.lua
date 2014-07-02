@@ -454,7 +454,7 @@ end
 function Lockdown:EventHandler_UnitCreated(unit)
 	local id = unit:GetId()
 	-- Invalid or existing markers
-	if not id or markers[id] then return nil end
+	if not id or markers[id] or not unit:IsValid() then return nil end
 	local utype = unit:GetType()
 	-- Players (Except Player)
 	local player = GameLib.GetPlayerUnit()
