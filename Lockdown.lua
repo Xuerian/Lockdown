@@ -524,10 +524,8 @@ function Lockdown:TimerHandler_HAL()
 			local overhead, unit_radius, unit_point = unit:GetOverheadAnchor(), 0
 			if overhead then
 				unit_radius = (pos.nY - overhead.y)/2
-				unit_point = NewVector(pos.nX, pos.nY - unit_radius)
-			else -- Default to bottom of unit
-				unit_point = NewVector(pos.nX, pos.nY)
-			end
+			end -- Else defaults to above radius
+			unit_point = NewVector(pos.nX, pos.nY - unit_radius)
 			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) then
 				-- Switch to mounted unit
 				if unit:GetType() == "Mount" and mounts[id] then
