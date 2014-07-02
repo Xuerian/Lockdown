@@ -536,11 +536,11 @@ function Lockdown:TimerHandler_HAL()
 				if unit:GetType() == "Mount" and mounts[id] then
 					unit = mounts[id]
 				end
-				if last_target == unit then
-					-- print(unit:GetName(), unit:IsOccluded())
-				end
 				-- Target
 				if GameLib.GetTargetUnit() ~= unit and (last_target ~= unit or (os.clock() - last_target_clock) > 15) then
+					if last_target == unit and GameLib.GetTargetUnit() ~= unit then
+						-- print(unit:GetName(), unit:IsOccluded())
+					end
 					GameLib.SetTargetUnit(unit)
 					last_target, last_target_clock = unit, os.clock()
 					-- print("Setting Target", unit:GetName())
