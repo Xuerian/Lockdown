@@ -476,6 +476,10 @@ function Lockdown:EventHandler_UnitCreated(unit)
 		markers[id] = marker
 		markers_by_type[utype][id] = marker
 
+		if GameLib.GetUnitScreenPosition(unit).bOnScreen then
+			onscreen[id] = unit
+		end
+
 	elseif utype ~= "NonPlayer" then
 		-- print(utype, unit:GetName(), unit:GetMouseOverType())
 	end
