@@ -505,7 +505,7 @@ function Lockdown:TimerHandler_HAL()
 				unit_radius = (pos.nY - overhead.y)/2
 			end -- Else defaults to above radius
 			unit_point = NewVector(pos.nX, pos.nY - unit_radius)
-			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) then
+			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) and not unit:IsThePlayer() then
 				-- Target
 				if GameLib.GetTargetUnit() ~= unit and (last_target ~= unit or (os.clock() - last_target_clock) > 15) then
 					if last_target == unit and GameLib.GetTargetUnit() ~= unit then
