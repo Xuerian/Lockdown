@@ -221,7 +221,6 @@ end
 function Lockdown:Init()
 	Apollo.RegisterAddon(self, true, L.button_configure)
 	Apollo.RegisterEventHandler("UnitCreated", "PreloadHandler_UnitCreated", self)
-	Apollo.RegisterEventHandler("CombatLogMount", "EventHandler_CombatLogMount", self)
 end
 
 
@@ -435,23 +434,11 @@ local markers = {}
 local onscreen = {}
 local markers_by_type = {
 	Player = {},
-	Mount = {},
 	Harvest = {},
 	NonPlayer = {},
 	Turret = {},
 }
-local mounts = {}
 -- Store category of marker
--- TODO: Mount events, swap player plates to mount and back. See: InfoPlates
-local function GetMountedPlayer(mount)
-	for k,v in pairs(markers_by_type.Player) do
-		local vUnit = GameLib.GetUnitById(k)
-		if vUnit:IsMounted() and mount == vUnit:GetUnitMount() then
-			return k
-		end
-	end
-end
-
 function Lockdown:EventHandler_UnitCreated(unit)
 	local id = unit:GetId()
 	-- Invalid or existing markers
@@ -460,16 +447,10 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	-- Players (Except Player)
 	local player = GameLib.GetPlayerUnit()
 	if (utype == "Player" and not unit:IsThePlayer())
-		-- Mounts (Except Player's)
-		or (utype == "Mount" and not (player:IsMounted() and unit == GameLib.GetPlayerUnit():GetUnitMount()))
 		-- Harvestable nodes (Except farming)
 		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()))
 		-- NPCs that get namemarkers
 		or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate()) then
-		-- Store mount lookup since we don't have :GetUnitMounted()
-		if utype == "Mount" then
-			mounts[id] = GetMountedPlayer(unit)
-		end
 		-- Activate marker
 		local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
 		marker:SetData(unit)
@@ -489,7 +470,6 @@ end
 function Lockdown:EventHandler_UnitDestroyed(unit)
 	local id = unit:GetId()
 	if markers[id] then
-		mounts[id] = nil
 		markers_by_type[unit:GetType()][id] = nil
 		markers[id]:Destroy()
 		markers[id] = nil
@@ -505,12 +485,6 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
 		onscreen[unit:GetId()] = visible and unit or nil
 	else
 		self:EventHandler_UnitDestroyed(unit)
-	end
-end
-
-function Lockdown:EventHandler_CombatLogMount(tEventArgs)
-	if not tEventArgs.bDismounted and not tEventArgs.unitCaster:IsThePlayer() then
-		mounts[tEventArgs.unitTarget:GetId()] = tEventArgs.unitCaster
 	end
 end
 
@@ -532,10 +506,6 @@ function Lockdown:TimerHandler_HAL()
 			end -- Else defaults to above radius
 			unit_point = NewVector(pos.nX, pos.nY - unit_radius)
 			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) then
-				-- Switch to mounted unit
-				if unit:GetType() == "Mount" and mounts[id] then
-					unit = mounts[id]
-				end
 				-- Target
 				if GameLib.GetTargetUnit() ~= unit and (last_target ~= unit or (os.clock() - last_target_clock) > 15) then
 					if last_target == unit and GameLib.GetTargetUnit() ~= unit then
