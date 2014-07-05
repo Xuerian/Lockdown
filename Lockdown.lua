@@ -400,26 +400,21 @@ function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Defer advanced targeting startup
 
-	self.timerATStartup = ApolloTimer.Create(0.1, true, "TimerHandler_ATStartup", self)
 	self.timerHAL = ApolloTimer.Create(99, true, "TimerHandler_HAL", self)
 	self.timerHAL:Stop()
-end
 
-
-----------------------------------------------------------
--- Units and Advanced Targeting
-
-function Lockdown:TimerHandler_ATStartup()
-	local player = GameLib.GetPlayerUnit()
-	if player and player:IsValid() then
-		self.timerATStartup:Stop()
+	TinyAsync:Wait(function()
+		local player = GameLib.GetPlayerUnit()
+		return player and player:IsValid()
+	end,
+	function()
+		is_scientist = PlayerPathLib.GetPlayerPathType() == 2
 		-- Update event registration
 		Apollo.RemoveEventHandler("UnitCreated", self)
 		Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
 		Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
 		Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
-		-- "Enable" timer
-		self.timerHAL:Set(0.05, true)
+		-- Initial locked timer
 		if GameLib.IsMouseLockOn() then
 			self.timerHAL:Start()
 		end
@@ -428,8 +423,13 @@ function Lockdown:TimerHandler_ATStartup()
 			self:EventHandler_UnitCreated(v)
 		end
 		preload_units = nil
-	end
+		-- Get player path
+	end)
 end
+
+
+----------------------------------------------------------
+-- Units and Advanced Targeting
 
 function Lockdown:PreloadHandler_UnitCreated(unit)
 	table.insert(preload_units, unit)
