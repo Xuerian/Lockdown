@@ -143,9 +143,7 @@ local Lockdown = {
 	reticles = {}
 }
 
-for k,v in pairs(Lockdown.defaults) do
-	Lockdown.settings[k] = v
-end
+setmetatable(Lockdown.settings, {__index = Lockdown.defaults})
 
 
 ----------------------------------------------------------
@@ -261,6 +259,12 @@ function Lockdown:OnSave(eLevel)
 		s.ahk_lmb = SystemKeyMap[s.ahk_lmb_key] or ""
 		s.ahk_rmb = SystemKeyMap[s.ahk_rmb_key] or ""
 		s.ahk_mmb = SystemKeyMap[s.ahk_mmb_key] or ""
+		-- Don't save defaults
+		for k,v in pairs(s) do
+			if v == self.defaults[k] then
+				s[k] = nil
+			end
+		end
 		return s
 	end
 end
@@ -269,7 +273,7 @@ function Lockdown:OnRestore(eLevel, tData)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.General and tData then
 		local s = self.settings
 		-- Restore settings
-		for k,v in pairs(s) do
+		for k,v in pairs(self.defaults) do
 			if tData[k] ~= nil then
 				s[k] = tData[k]
 			end
