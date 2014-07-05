@@ -289,7 +289,7 @@ function Lockdown:OnRestore(eLevel, tData)
 	end
 end
 
-local preload_units = {}
+local preload_units, is_scientist = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
@@ -400,7 +400,7 @@ function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Defer advanced targeting startup
 
-	self.timerHAL = ApolloTimer.Create(99, true, "TimerHandler_HAL", self)
+	self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
 	self.timerHAL:Stop()
 
 	TinyAsync:Wait(function()
@@ -442,6 +442,7 @@ local markers_by_type = {
 	Harvest = {},
 	NonPlayer = {},
 	Turret = {},
+	Simple = {},
 }
 -- Store category of marker
 function Lockdown:EventHandler_UnitCreated(unit)
@@ -449,26 +450,30 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	-- Invalid or existing markers
 	if not id or markers[id] or not unit:IsValid() or unit:IsThePlayer() then return nil end
 	local utype = unit:GetType()
+	-- Filter units
 	-- Players (Except Player)
 	local player = GameLib.GetPlayerUnit()
 	if (utype == "Player" and not unit:IsThePlayer())
+		-- NPCs that get plates
+		or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate())
 		-- Harvestable nodes (Except farming)
 		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()))
-		-- NPCs that get namemarkers
-		or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate()) then
-		-- Activate marker
-		local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
-		marker:SetData(unit)
-		marker:SetUnit(unit)
-		markers[id] = marker
-		markers_by_type[utype][id] = marker
+		then
+	elseif utype == "Simple" and is_scientist then
+		local tState = unit:GetActivationState()
+		if not tState.ScientistScannable or not tState.ScientistScannable.bIsActive then return end 
+		-- Nothing.
+	else return end
+	-- Activate marker
+	local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
+	marker:Show()
+	marker:SetData(unit)
+	marker:SetUnit(unit)
+	markers[id] = marker
+	markers_by_type[utype][id] = marker
 
-		if GameLib.GetUnitScreenPosition(unit).bOnScreen then
-			onscreen[id] = unit
-		end
-
-	elseif utype ~= "NonPlayer" then
-		-- print(utype, unit:GetName(), unit:GetMouseOverType())
+	if GameLib.GetUnitScreenPosition(unit).bOnScreen then
+		onscreen[id] = unit
 	end
 end
 
@@ -497,7 +502,7 @@ end
  -- If reticle center within range of unit center (reticle size vs estimated object size)
  -- If object meets criteria (Node range, ally health)
 local reticle_point, reticle_radius
-local last_target, last_target_clock
+local last_target, last_target_clock -- Workaround to prevent target spam
 function Lockdown:TimerHandler_HAL()
 	-- Grab local references to things we're going to use each iteration
 	local reticle_point, player = reticle_point, GameLib.GetPlayerUnit()
@@ -505,9 +510,14 @@ function Lockdown:TimerHandler_HAL()
 	local VectorNew, VectorLength = Vector2.New, reticle_point.Length
 	local GetTargetUnit, GetUnitScreenPosition, clock = GameLib.GetTargetUnit, GameLib.GetUnitScreenPosition, os.clock
 	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
+	-- Iterate over onscreen units
 	for id, unit in pairs(onscreen) do
-		local pos = GameLib.GetUnitScreenPosition(unit)
-		if pos and pos.bOnScreen then
+		local pos, utype = GetUnitScreenPosition(unit), GetType(unit)
+		-- Destroy plates for  the player unit we get randomly
+		if unit == player then
+			self:EventHandler_UnitDestroyed(unit)
+		-- Verify that unit is still on screen
+		elseif pos and pos.bOnScreen and (not utype == "Simple" or not unit:IsOccluded()) then
 			-- Try to place point in middle of unit
 			local overhead, unit_radius, unit_point = GetOverheadAnchor(unit), 0
 			if overhead then
