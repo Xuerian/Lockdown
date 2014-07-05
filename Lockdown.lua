@@ -473,7 +473,7 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	markers_by_type[utype][id] = marker
 
 	if GameLib.GetUnitScreenPosition(unit).bOnScreen then
-		onscreen[id] = unit
+		self:EventHandler_WorldLocationOnScreen(nil, marker, true)
 	end
 end
 
