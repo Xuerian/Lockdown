@@ -499,25 +499,30 @@ end
 local reticle_point, reticle_radius
 local last_target, last_target_clock
 function Lockdown:TimerHandler_HAL()
-	local reticle_point, NewVector, VectorLength = reticle_point, Vector2.New, reticle_point.Length
-	-- wipe(HALset)
+	-- Grab local references to things we're going to use each iteration
+	local reticle_point, player = reticle_point, GameLib.GetPlayerUnit()
+	if not player then return nil end -- Bail if the player isn't available
+	local VectorNew, VectorLength = Vector2.New, reticle_point.Length
+	local GetTargetUnit, GetUnitScreenPosition, clock = GameLib.GetTargetUnit, GameLib.GetUnitScreenPosition, os.clock
+	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
 	for id, unit in pairs(onscreen) do
 		local pos = GameLib.GetUnitScreenPosition(unit)
 		if pos and pos.bOnScreen then
 			-- Try to place point in middle of unit
-			local overhead, unit_radius, unit_point = unit:GetOverheadAnchor(), 0
+			local overhead, unit_radius, unit_point = GetOverheadAnchor(unit), 0
 			if overhead then
 				unit_radius = (pos.nY - overhead.y)/2
 			end -- Else defaults to above radius
-			unit_point = NewVector(pos.nX, pos.nY - unit_radius)
-			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) and not unit:IsThePlayer() then
+			unit_point = VectorNew(pos.nX, pos.nY - unit_radius)
+			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) then
 				-- Target
-				if GameLib.GetTargetUnit() ~= unit and (last_target ~= unit or (os.clock() - last_target_clock) > 15) then
-					if last_target == unit and GameLib.GetTargetUnit() ~= unit then
+				 -- Workaround target spam with last target unit/time checks
+				if GetTargetUnit() ~= unit and (last_target ~= unit or (clock() - last_target_clock) > 15) then
+					if last_target == unit and GetTargetUnit() ~= unit then
 						-- print(unit:GetName(), unit:IsOccluded())
 					end
 					GameLib.SetTargetUnit(unit)
-					last_target, last_target_clock = unit, os.clock()
+					last_target, last_target_clock = unit, clock()
 					-- print("Setting Target", unit:GetName())
 				end
 				return
