@@ -151,9 +151,9 @@ end
 ----------------------------------------------------------
 -- TinyAsync, because WildStar
 
-local TinyAsync = { timers = {} }
+local TinyAsync = { timers = {}, i = 0 }
 function TinyAsync:Wait(fCondition, fAction, nfDelay)
-	local i = #self
+	local i = self.i
 	local timer = ApolloTimer.Create(nfDelay or 0.1, true, "Timer_"..i, self)
 	self.timers[i] = timer
 	-- Apparently ApolloTimer doesn't like numerical function keys
@@ -166,6 +166,7 @@ function TinyAsync:Wait(fCondition, fAction, nfDelay)
 			self["Timer_"..i] = nil
 		end
 	end
+	self.i = i + 1
 	return i
 end
 
