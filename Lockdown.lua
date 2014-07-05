@@ -459,11 +459,12 @@ function Lockdown:EventHandler_UnitCreated(unit)
 		-- Harvestable nodes (Except farming)
 		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()))
 		then
-	elseif utype == "Simple" and is_scientist then
-		local tState = unit:GetActivationState()
-		if not tState.ScientistScannable or not tState.ScientistScannable.bIsActive then return end 
-		-- Nothing.
-	else return end
+			-- Ok!
+	-- Quest objective units, scannables
+	 -- These are filtered in WorldLocationOnScreen, since they can change.
+	elseif utype == "Simple" and unit:GetRewardInfo() then
+		-- Ok!
+	else return end -- Not ok.
 	-- Activate marker
 	local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
 	marker:Show()
@@ -492,6 +493,22 @@ end
 function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
 	local unit = ctrl:GetData()
 	if unit:IsValid() then
+		-- Don't show useless simple units
+		 -- They might change state though, so we still
+		 -- have to watch all of them
+		if unit:GetType() == "Simple" then
+			local reward, show = unit:GetRewardInfo()
+			if reward and reward[1] then
+				for k,v in pairs(reward) do
+					if (v.strType == "Quest" and v.nCompleted and v.nCompleted < v.nNeeded)
+						 or (v.strType == "Scientist" and is_scientist) then
+						show = true
+						break
+					end
+				end
+			end
+			visible = show and visible or false
+		end
 		onscreen[unit:GetId()] = visible and unit or nil
 	else
 		self:EventHandler_UnitDestroyed(unit)
