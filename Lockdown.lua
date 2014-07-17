@@ -74,14 +74,14 @@ local tLocalization = {
 
 		togglelock = "Toggle Lockdown",
 		locktarget = "Lock/Unlock current target",
-		targetmouseover = "Target unit in reticle",
+		autotarget = "Target unit in reticle",
 		Widget_free_with = "Free cursor while holding..",
 		free_also_toggles = "Free cursor acts as toggle (Unfinished)",
 		lock_on_load = "Lock on startup",
 		ahk_cursor_center = "Center cursor on lock",
 		ahk_update_interval = "AHK update interval [ms]",
-		reticle_target = "Reticle targeting",
-		reticle_target_delay = "Reticle target delay",
+		auto_target = "Reticle targeting",
+		auto_target_delay = "Reticle target delay",
 		reticle_show = "Show reticle",
 		reticle_opacity = "Reticle opacity",
 		reticle_size = "Reticle size",
@@ -112,18 +112,18 @@ local Lockdown = {
 		togglelock_mod = false,
 		locktarget_key = 20, -- Caps Lock
 		locktarget_mod = false,
-		targetmouseover_key = 84, -- T
-		targetmouseover_mod = "control",
+		manualtarget_key = 84, -- T
+		manualtarget_mod = "control",
 		free_with_shift = false,
 		free_with_ctrl = false,
 		free_with_alt = true,
 		free_also_toggles = false,
 		reticle_show = true,
-		reticle_target = true,
-		reticle_target_neutral = true,
-		reticle_target_hostile = true,
-		reticle_target_friendly = true,
-		reticle_target_delay = 0,
+		auto_target = true,
+		auto_target_neutral = true,
+		auto_target_hostile = true,
+		auto_target_friendly = true,
+		auto_target_delay = 0,
 		reticle_opacity = 0.3,
 		reticle_size = 32,
 		reticle_sprite = "giznat",
@@ -177,13 +177,13 @@ local function print(...)
 	table.insert(print_buffer, {...})
 end
 
-TinyAsync:Wait(function() return ChatAddon and ChatAddon.tWindow end, function()
+TinyAsync:Wait(function() return ChatLog and ChatLog.tWindow end, function()
 	function print(...)
 		local out = {}
 		for i=1,select('#', ...) do
 			table.insert(out, tostring(select(i, ...)))
 		end
-		Print(table.concat(out, ", "))
+		Print(table.concat(out, " "))
 	end
 	-- Process and clear buffer
 	for i,v in ipairs(print_buffer) do
@@ -280,7 +280,7 @@ function Lockdown:OnRestore(eLevel, tData)
 		end
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
-		self.timerDelayedTarget:Set(s.reticle_target_delay / 1000, false)
+		self.timerDelayedTarget:Set(s.auto_target_delay / 1000, false)
 		-- Show settings window after reload
 		if tData._is_ahk_reload then
 			self:OnConfigure()
@@ -313,9 +313,7 @@ function Lockdown:OnLoad()
 
 	----------------------------------------------------------
 	-- Targeting
-	-- TODO: Only do this when settings.reticle_target is on
 
-	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
 	Apollo.RegisterEventHandler("TargetUnitChanged", "EventHandler_TargetUnitChanged", self)
 	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerRelock:Stop()
@@ -460,7 +458,7 @@ function Lockdown:EventHandler_UnitCreated(unit)
 		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()))
 		then
 			-- Ok!
-	-- Quest objective units, scannables
+	 -- Quest objective units, scannables
 	 -- These are filtered in WorldLocationOnScreen, since they can change.
 	elseif utype == "Simple" and unit:GetRewardInfo() then
 		-- Ok!
@@ -520,6 +518,7 @@ end
  -- If object meets criteria (Node range, ally health)
 local reticle_point, reticle_radius
 local last_target, last_target_clock -- Workaround to prevent target spam
+local uCurrentTarget, uLockedTarget
 function Lockdown:TimerHandler_HAL()
 	-- Grab local references to things we're going to use each iteration
 	local reticle_point, player = reticle_point, GameLib.GetPlayerUnit()
@@ -543,14 +542,35 @@ function Lockdown:TimerHandler_HAL()
 			unit_point = VectorNew(pos.nX, pos.nY - unit_radius)
 			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) then
 				-- Target
-				 -- Workaround target spam with last target unit/time checks
-				if GetTargetUnit() ~= unit and (last_target ~= unit or (clock() - last_target_clock) > 15) then
-					if last_target == unit and GetTargetUnit() ~= unit then
-						-- print(unit:GetName(), unit:IsOccluded())
+				-- Workaround target spam with last target unit/time checks
+				uCurrentTarget = GetTargetUnit()
+				if not uCurrentTarget or uCurrentTarget ~= unit then
+					if ((last_target ~= unit and not unit:IsThePlayer()) or (clock() - last_target_clock > 15)) then
+						if uLockedTarget then
+							uCurrentTarget = uLockedTarget
+							print("Setting Target", uCurrentTarget:GetName())
+						else
+							uCurrentTarget = unit
+							print("Storing Target", uCurrentTarget:GetName())
+						end
+						last_target, last_target_clock = unit, os.clock()
 					end
-					GameLib.SetTargetUnit(unit)
-					last_target, last_target_clock = unit, clock()
-					-- print("Setting Target", unit:GetName())
+				end
+				if self.settings.auto_target and GameLib.IsMouseLockOn() and (not uLockedTarget or uLockedTarget:IsDead()) then
+					local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
+					if ((self.settings.auto_target_friendly and disposition == 2)
+						or (self.settings.auto_target_neutral and disposition == 1)
+						or (self.settings.auto_target_hostile and disposition == 0)) then
+						if self.settings.auto_target_delay ~= 0 then
+							if unit ~= GameLib.GetTargetUnit() then
+								self.timerDelayedTarget:Start()
+							else
+								self.timerDelayedTarget:Stop()
+							end
+						else
+							GameLib.SetTargetUnit(uCurrentTarget)
+						end
+					end
 				end
 				return
 			end
@@ -686,7 +706,7 @@ end
 -- CAN'T TAKE THE CHANGE, MAN
 local ChangeHandlers = {}
 
-function ChangeHandlers.reticle_target_delay(value)
+function ChangeHandlers.auto_target_delay(value)
 	Lockdown.timerDelayedTarget:Set(value, false)
 end
 
@@ -923,7 +943,7 @@ end
 -- Keybind handling
 
 -- Store key and modifier check function
-local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, targetmouseover_key, targetmouseover_mod
+local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, manualtarget_key, manualtarget_mod
 local function Upvalues(whichkey, whichmod)
 	local mod = Lockdown.settings[whichmod]
 	if mod == "shift" then
@@ -939,7 +959,7 @@ end
 function Lockdown:KeyOrModifierUpdated()
 	togglelock_key, togglelock_mod = Upvalues("togglelock_key", "togglelock_mod")
 	locktarget_key, locktarget_mod = Upvalues("locktarget_key", "locktarget_mod")
-	targetmouseover_key, targetmouseover_mod = Upvalues("targetmouseover_key", "targetmouseover_mod")
+	manualtarget_key, manualtarget_mod = Upvalues("manualtarget_key", "manualtarget_mod")
 	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
 		self.timerFreeKeys:Start()
 	else
@@ -948,7 +968,7 @@ function Lockdown:KeyOrModifierUpdated()
 end
 
 -- Keys
-local uLockedTarget
+
 function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Listen for key to bind
 	if self.bind_mode_active and iKey ~= 0xF1 and iKey ~= 0xF2 then
@@ -977,10 +997,11 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	elseif iKey == 0xF2 and not free_key_held then
 		self:SetActionMode(false, true)
 
-	-- Target mouseover
-	elseif iKey == targetmouseover_key and (not targetmouseover_mod or targetmouseover_mod()) then
-		GameLib.SetTargetUnit(GetMouseOverUnit())
-
+	-- Manual target
+	elseif iKey == manualtarget_key and (not manualtarget_mod or manualtarget_mod()) then
+		if uCurrentTarget then
+			GameLib.SetTargetUnit(uCurrentTarget)
+		end
 	-- Toggle mode
 	elseif iKey == togglelock_key and (not togglelock_mod or togglelock_mod()) then
 		-- Save currently active windows and resume
@@ -1011,7 +1032,6 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	elseif iKey == locktarget_key and (not locktarget_mod or locktarget_mod()) then
 		if uLockedTarget then
 			uLockedTarget = nil
-			GameLib.SetTargetUnit()
 			-- TODO: Locked target indicator instead of clearing target
 		else
 			uLockedTarget = GameLib.GetTargetUnit()
@@ -1051,35 +1071,10 @@ function Lockdown:TimerHandler_FreeKeys()
 	end
 end
 
-
-----------------------------------------------------------
--- Mouseover targeting
-
--- Targeting
-local uLastMouseover
-function Lockdown:EventHandler_MouseOverUnitChanged(unit)
-	local opt = self.settings
-	if unit and opt.reticle_target and GameLib.IsMouseLockOn() and (not uLockedTarget or uLockedTarget:IsDead()) then
-		local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
-		if ((opt.reticle_target_friendly and disposition == 2)
-			or (opt.reticle_target_neutral and disposition == 1)
-			or (opt.reticle_target_hostile and disposition == 0)) then
-			if opt.reticle_target_delay ~= 0 then
-				if unit ~= GameLib.GetTargetUnit() then
-					uLastMouseover = unit
-					self.timerDelayedTarget:Start()
-				else
-					self.timerDelayedTarget:Stop()
-				end
-			else
-				GameLib.SetTargetUnit(unit)
-			end
-		end
-	end
-end
-
 function Lockdown:TimerHandler_DelayedTarget()
-	GameLib.SetTargetUnit(uLastMouseover)
+	if uCurrentTarget then
+		GameLib.SetTargetUnit(uCurrentTarget)
+	end
 end
 
 function Lockdown:EventHandler_TargetUnitChanged()
