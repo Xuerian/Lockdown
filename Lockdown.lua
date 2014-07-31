@@ -177,7 +177,7 @@ local function print(...)
 	table.insert(print_buffer, {...})
 end
 
-TinyAsync:Wait(function() return ChatLog and ChatLog.tWindow end, function()
+TinyAsync:Wait(function() return ChatAddon and ChatAddon.tWindow end, function()
 	function print(...)
 		local out = {}
 		for i=1,select('#', ...) do
