@@ -518,7 +518,7 @@ end
  -- If object meets criteria (Node range, ally health)
 local reticle_point, reticle_radius
 local last_target, last_target_clock -- Workaround to prevent target spam
-local uCurrentTarget, uLockedTarget
+local locked_target
 function Lockdown:TimerHandler_HAL()
 	-- Grab local references to things we're going to use each iteration
 	local reticle_point, player = reticle_point, GameLib.GetPlayerUnit()
@@ -543,20 +543,20 @@ function Lockdown:TimerHandler_HAL()
 			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) then
 				-- Target
 				-- Workaround target spam with last target unit/time checks
-				uCurrentTarget = GetTargetUnit()
-				if not uCurrentTarget or uCurrentTarget ~= unit then
+				local current_target = GetTargetUnit()
+				if not current_target or current_target ~= unit then
 					if ((last_target ~= unit and not unit:IsThePlayer()) or (clock() - last_target_clock > 15)) then
-						if uLockedTarget then
-							uCurrentTarget = uLockedTarget
-							print("Setting Target", uCurrentTarget:GetName())
+						if locked_target then
+							current_target = locked_target
+							print("Setting Target", current_target:GetName())
 						else
-							uCurrentTarget = unit
-							print("Storing Target", uCurrentTarget:GetName())
+							current_target = unit
+							print("Storing Target", current_target:GetName())
 						end
 						last_target, last_target_clock = unit, os.clock()
 					end
 				end
-				if self.settings.auto_target and GameLib.IsMouseLockOn() and (not uLockedTarget or uLockedTarget:IsDead()) then
+				if self.settings.auto_target and GameLib.IsMouseLockOn() and (not locked_target or locked_target:IsDead()) then
 					local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
 					if ((self.settings.auto_target_friendly and disposition == 2)
 						or (self.settings.auto_target_neutral and disposition == 1)
@@ -568,7 +568,7 @@ function Lockdown:TimerHandler_HAL()
 								self.timerDelayedTarget:Stop()
 							end
 						else
-							GameLib.SetTargetUnit(uCurrentTarget)
+							GameLib.SetTargetUnit(current_target)
 						end
 					end
 				end
