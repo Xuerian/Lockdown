@@ -699,7 +699,7 @@ function ChangeHandlers.auto_target_delay(value)
 	Lockdown.timerDelayedTarget:Set(value, false)
 end
 
-function ReticleChanged()
+local function ReticleChanged()
 	Lockdown.wndReticle:Show(true)
 	Lockdown:Reticle_Update()
 end
@@ -713,7 +713,7 @@ ChangeHandlers.reticle_hue_green = ReticleChanged
 ChangeHandlers.reticle_hue_blue = ReticleChanged
 ChangeHandlers.reticle_sprite = ReticleChanged
 
-function AutoTargetDisposition(sDisposition)
+local function AutoTargetDisposition(sDisposition)
 	return function(value)
 		Lockdown.tTargetDispositions[Unit.CodeEnumDisposition[sDisposition]] = value
 	end
