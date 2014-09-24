@@ -450,13 +450,7 @@ end
 
 local markers = {}
 local onscreen = {}
-local markers_by_type = {
-	Player = {},
-	Harvest = {},
-	NonPlayer = {},
-	Turret = {},
-	Simple = {},
-}
+
 -- Store category of marker
 function Lockdown:EventHandler_UnitCreated(unit)
 	local id = unit:GetId()
@@ -484,7 +478,6 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	marker:SetData(unit)
 	marker:SetUnit(unit)
 	markers[id] = marker
-	markers_by_type[utype][id] = marker
 
 	if GameLib.GetUnitScreenPosition(unit).bOnScreen then
 		self:EventHandler_WorldLocationOnScreen(nil, marker, true)
@@ -494,7 +487,6 @@ end
 function Lockdown:EventHandler_UnitDestroyed(unit)
 	local id = unit:GetId()
 	if markers[id] then
-		markers_by_type[unit:GetType()][id] = nil
 		markers[id]:Destroy()
 		markers[id] = nil
 	end
