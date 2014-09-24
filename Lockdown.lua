@@ -281,6 +281,12 @@ function Lockdown:OnRestore(eLevel, tData)
 				s[k] = tData[k]
 			end
 		end
+		-- Build settings dependent data
+		self.tTargetDispositions = {
+			[Unit.CodeEnumDisposition.Friendly] = s.auto_target_friendly,
+			[Unit.CodeEnumDisposition.Neutral] = s.auto_target_neutral,
+			[Unit.CodeEnumDisposition.Hostile] = s.auto_target_hostile
+		}
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
 		self.timerDelayedTarget:Set(s.auto_target_delay / 1000, false)
@@ -400,7 +406,6 @@ function Lockdown:OnLoad()
 
 	----------------------------------------------------------
 	-- Defer advanced targeting startup
-
 	self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
 	self.timerHAL:Stop()
 
@@ -496,7 +501,7 @@ end
 
 function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
 	local unit = ctrl:GetData()
-	if unit:IsValid() then
+	if unit:IsValid() and self.tTargetDispositions[unit:GetDispositionTo(player)] then
 		-- Don't show useless simple units
 		 -- They might change state though, so we still
 		 -- have to watch all of them
@@ -522,61 +527,35 @@ end
 -- Scan lists of markers in order of priority based on current state
  -- If reticle center within range of unit center (reticle size vs estimated object size)
  -- If object meets criteria (Node range, ally health)
-local reticle_point, reticle_radius
-local last_target, last_target_clock -- Workaround to prevent target spam
-local locked_target
+local pReticle, nReticleRadius
+local nLastTargetTime, uLastTarget, uDelayedTarget = 0
 function Lockdown:TimerHandler_HAL()
+	if not player then return end
 	-- Grab local references to things we're going to use each iteration
-	local reticle_point, player = reticle_point, GameLib.GetPlayerUnit()
-	if not player then return nil end -- Bail if the player isn't available
-	local VectorNew, VectorLength = Vector2.New, reticle_point.Length
-	local GetTargetUnit, GetUnitScreenPosition, clock = GameLib.GetTargetUnit, GameLib.GetUnitScreenPosition, os.clock
+	local NewPoint, PointLength = Vector2.New, pReticle.Length
+	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
 	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
+	local uCurrentTarget, nTargetTimeDelta = GameLib.GetTargetUnit(), os.clock() - nLastTargetTime
 	-- Iterate over onscreen units
 	for id, unit in pairs(onscreen) do
-		local pos, utype = GetUnitScreenPosition(unit), GetType(unit)
-		-- Destroy plates for  the player unit we get randomly
-		if unit == player then
+		local tPos = GetUnitScreenPosition(unit)
+		-- Destroy player markers we shouldn't be getting
+		if unit == player or unit:IsDead() then
 			self:EventHandler_UnitDestroyed(unit)
 		-- Verify that unit is still on screen
-		elseif pos and pos.bOnScreen and (not utype == "Simple" or not unit:IsOccluded()) then
-			-- Try to place point in middle of unit
-			local overhead, unit_radius, unit_point = GetOverheadAnchor(unit), 0
-			if overhead then
-				unit_radius = (pos.nY - overhead.y)/2
-			end -- Else defaults to above radius
-			unit_point = VectorNew(pos.nX, pos.nY - unit_radius)
-			if VectorLength(unit_point - reticle_point) < (unit_radius + reticle_radius) then
-				-- Target
-				-- Workaround target spam with last target unit/time checks
-				local current_target = GetTargetUnit()
-				if not current_target or current_target ~= unit then
-					if ((last_target ~= unit and not unit:IsThePlayer()) or (clock() - last_target_clock > 15)) then
-						if locked_target then
-							current_target = locked_target
-							print("Setting Target", current_target:GetName())
-						else
-							current_target = unit
-							print("Storing Target", current_target:GetName())
-						end
-						last_target, last_target_clock = unit, os.clock()
-					end
-				end
-				if self.settings.auto_target and GameLib.IsMouseLockOn() and (not locked_target or locked_target:IsDead()) then
-					local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
-					if ((self.settings.auto_target_friendly and disposition == 2)
-						or (self.settings.auto_target_neutral and disposition == 1)
-						or (self.settings.auto_target_hostile and disposition == 0)) then
-						if self.settings.auto_target_delay ~= 0 then
-							if unit ~= GameLib.GetTargetUnit() then
-								self.timerDelayedTarget:Start()
-							else
-								self.timerDelayedTarget:Stop()
-							end
-						else
-							GameLib.SetTargetUnit(current_target)
-						end
-					end
+		elseif tPos and tPos.bOnScreen and (not GetType(unit) == "Simple" or not unit:IsOccluded()) then
+			-- Try to place unit point in middle of unit
+			local pOverhead, nUnitRadius = GetOverheadAnchor(unit), 0
+			if pOverhead then
+				nUnitRadius = (tPos.nY - pOverhead.y)/2
+			end
+			local pUnit = NewPoint(tPos.nX, tPos.nY - nUnitRadius)
+			-- Check reticle intersection
+			-- TODO: Re-add delayed targeting
+			if PointLength(pUnit - pReticle) < (nUnitRadius + nReticleRadius) then
+				if not uCurrentTarget or (uCurrentTarget ~= unit and (uLastTarget ~= unit or nTargetTimeDelta > 15)) then
+					GameLib.SetTargetUnit(unit)
+					uLastTarget, nLastTargetTime = unit, os.clock()
 				end
 				return
 			end
@@ -729,6 +708,16 @@ ChangeHandlers.reticle_hue_red = ReticleChanged
 ChangeHandlers.reticle_hue_green = ReticleChanged
 ChangeHandlers.reticle_hue_blue = ReticleChanged
 ChangeHandlers.reticle_sprite = ReticleChanged
+
+function AutoTargetDisposition(sDisposition)
+	return function(value)
+		Lockdown.tTargetDispositions[Unit.CodeEnumDisposition[sDisposition]] = value
+	end
+end
+
+ChangeHandlers.auto_target_friendly = AutoTargetDisposition("Friendly")
+ChangeHandlers.auto_target_neutral = AutoTargetDisposition("Neutral")
+ChangeHandlers.auto_target_hostile = AutoTargetDisposition("Hostile")
 
 -- Per category widget handlers
 -- Binding keys
@@ -1008,6 +997,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		if uCurrentTarget then
 			GameLib.SetTargetUnit(uCurrentTarget)
 		end
+
 	-- Toggle mode
 	elseif iKey == togglelock_key and (not togglelock_mod or togglelock_mod()) then
 		-- Save currently active windows and resume
@@ -1078,12 +1068,15 @@ function Lockdown:TimerHandler_FreeKeys()
 end
 
 function Lockdown:TimerHandler_DelayedTarget()
-	if uCurrentTarget then
-		GameLib.SetTargetUnit(uCurrentTarget)
+	if uDelayedTarget then
+		GameLib.SetTargetUnit(uDelayedTarget)
 	end
 end
 
 function Lockdown:EventHandler_TargetUnitChanged()
+	if not GameLib.GetTargetUnit() then
+		uLastTarget = nil
+	end
 	uLockedTarget = nil
 end
 
@@ -1145,8 +1138,8 @@ function Lockdown:Reticle_Update()
 
 	local size = Apollo.GetDisplaySize()
 	local ret_x, ret_y = size.nWidth/2 + rox, size.nHeight/2 + roy
-	reticle_point = Vector2.New(ret_x, ret_y)
-	reticle_radius = n
+	pReticle = Vector2.New(ret_x, ret_y)
+	nReticleRadius = n
 end
 
 function Lockdown:AddReticle(name, path, size)
