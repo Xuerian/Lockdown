@@ -24,7 +24,9 @@ local tAdditionalWindows = {
 	"ResurrectDialog",
 	"ExitInstanceDialog",
 	"GuildDesignerForm",
-	"SupplySachelForm"
+	"SupplySachelForm",
+	"ViragsSocialMainForm",
+	"InterruptProgress", -- ZInterrupt
 }
 
 -- Add windows to ignore here
