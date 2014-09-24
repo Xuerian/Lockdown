@@ -415,19 +415,31 @@ function Lockdown:OnLoad()
 		Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
 		Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
 		Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
-		-- Initial locked timer
-		if GameLib.IsMouseLockOn() then
-			self.timerHAL:Start()
-		end
 		-- Process pre-load units
 		for i,v in ipairs(preload_units) do
 			self:EventHandler_UnitCreated(v)
 		end
 		preload_units = nil
 		-- Get player path
+		self.HALReady = true
+		-- Initial locked timer
+		if GameLib.IsMouseLockOn() then
+			self:StartHAL()
+		end
 	end)
 end
 
+function Lockdown:StartHAL()
+	if self.settings.auto_target and self.HALReady then
+		self.timerHAL:Start()
+	end
+end
+
+function Lockdown:StopHAL()
+	if self.HALReady then
+		self.timerHAL:Stop()
+	end
+end
 
 ----------------------------------------------------------
 -- Units and Advanced Targeting
@@ -1095,9 +1107,9 @@ function Lockdown:SetActionMode(bState)
 		GameLib.SetMouseLock(bState)
 	end
 	if bState then
-		self.timerHAL:Start()
+		self:StartHAL()
 	else
-		self.timerHAL:Stop()
+		self:StopHAL()
 		bHotSuspend = false
 		bColdSuspend = false
 	end
@@ -1110,7 +1122,7 @@ function Lockdown:ForceActionMode()
 	if not GameLib.IsMouseLockOn() then
 		GameLib.SetMouseLock(true)
 		self.wndReticle:Show(true)
-		self.timerHAL:Start()
+		self:StartHAL()
 	end
 	-- TODO: Indicate inactive-but-enabled status
 end
@@ -1120,7 +1132,7 @@ function Lockdown:SuspendActionMode()
 	if GameLib.IsMouseLockOn() then
 		GameLib.SetMouseLock(false)
 		self.wndReticle:Show(false)
-		self.timerHAL:Stop()
+		self:StopHAL()
 	end
 	-- TODO: Indicate active-but-suspended status
 end
