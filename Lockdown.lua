@@ -409,6 +409,7 @@ function Lockdown:OnLoad()
 		return player and player:IsValid()
 	end,
 	function()
+		-- Get player path
 		is_scientist = PlayerPathLib.GetPlayerPathType() == 2
 		-- Update event registration
 		Apollo.RemoveEventHandler("UnitCreated", self)
@@ -420,7 +421,6 @@ function Lockdown:OnLoad()
 			self:EventHandler_UnitCreated(v)
 		end
 		preload_units = nil
-		-- Get player path
 		self.HALReady = true
 		-- Initial locked timer
 		if GameLib.IsMouseLockOn() then
@@ -1006,7 +1006,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 			end
 		end
 	
-	-- Static hotkeys, F7 and F8
+	-- Use vkeys to avoid overlapping player input
 	elseif iKey == 0xF1 then
 		self:SetActionMode(true, true)
 	elseif iKey == 0xF2 and not free_key_held then
