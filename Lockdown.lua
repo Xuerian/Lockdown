@@ -292,7 +292,7 @@ function Lockdown:OnRestore(eLevel, tData)
 	end
 end
 
-local preload_units, is_scientist = {}
+local preload_units, is_scientist, player = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
@@ -405,7 +405,7 @@ function Lockdown:OnLoad()
 	self.timerHAL:Stop()
 
 	TinyAsync:Wait(function()
-		local player = GameLib.GetPlayerUnit()
+		player = GameLib.GetPlayerUnit()
 		return player and player:IsValid()
 	end,
 	function()
@@ -458,8 +458,7 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	if not id or markers[id] or not unit:IsValid() or unit:IsThePlayer() then return nil end
 	local utype = unit:GetType()
 	-- Filter units
-	-- Players (Except Player)
-	local player = GameLib.GetPlayerUnit()
+	--  Players (Except Player)
 	if (utype == "Player" and not unit:IsThePlayer())
 		-- NPCs that get plates
 		or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate())
