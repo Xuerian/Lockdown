@@ -497,6 +497,10 @@ function Lockdown:EventHandler_UnitDestroyed(unit)
 	if onscreen[id] then
 		onscreen[id] = nil
 	end
+	if GameLib.IsMouseLockOn() and unit == GameLib.GetTargetUnit() then
+		uCurrentTarget, uLastTarget = nil, nil
+		GameLib.SetTargetUnit()
+	end
 end
 
 function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
