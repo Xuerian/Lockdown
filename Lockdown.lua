@@ -76,6 +76,7 @@ local tLocalization = {
 
 		togglelock = "Toggle Lockdown",
 		locktarget = "Lock/Unlock current target",
+		manualtarget = "Manual target",
 		autotarget = "Target unit in reticle",
 		Widget_free_with = "Free cursor while holding..",
 		free_also_toggles = "Free cursor acts as toggle (Unfinished)",
