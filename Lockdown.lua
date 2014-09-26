@@ -72,12 +72,11 @@ local tLocalization = {
 		button_label_mod = "Modifier",
 
 		Title_tweaks = "Tweaks",
-		mouselockrebind = "Orange settings require the .ahk script. Reload both UI and .ahk script after changing. See the Lockdown Curse page for details.",
+		mouselockrebind = "Orange settings require included ahk script, read the Lockdown Curse page for details. Orange and yellow settings require a UI reload to take effect.",
 
 		togglelock = "Toggle Lockdown",
 		locktarget = "Lock/Unlock current target",
 		manualtarget = "Manual target",
-		autotarget = "Target unit in reticle",
 		Widget_free_with = "Free cursor while holding..",
 		free_also_toggles = "Free cursor acts as toggle (Unfinished)",
 		lock_on_load = "Lock on startup",
@@ -406,36 +405,38 @@ function Lockdown:OnLoad()
 
 	----------------------------------------------------------
 	-- Defer advanced targeting startup
-	self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
-	self.timerHAL:Stop()
+	if self.settings.auto_target then
+		self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
+		self.timerHAL:Stop()
 
-	TinyAsync:Wait(function()
-		player = GameLib.GetPlayerUnit()
-		return player and player:IsValid()
-	end,
-	function()
-		-- Get player path
-		is_scientist = PlayerPathLib.GetPlayerPathType() == 2
-		-- Update event registration
-		Apollo.RemoveEventHandler("UnitCreated", self)
-		Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
-		Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
-		Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
-		-- Process pre-load units
-		for i,v in ipairs(preload_units) do
-			self:EventHandler_UnitCreated(v)
-		end
-		preload_units = nil
-		self.HALReady = true
-		-- Initial locked timer
-		if GameLib.IsMouseLockOn() then
-			self:StartHAL()
-		end
-	end)
+		TinyAsync:Wait(function()
+			player = GameLib.GetPlayerUnit()
+			return player and player:IsValid()
+		end,
+		function()
+			-- Get player path
+			is_scientist = PlayerPathLib.GetPlayerPathType() == 2
+			-- Update event registration
+			Apollo.RemoveEventHandler("UnitCreated", self)
+			Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
+			Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
+			Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
+			-- Process pre-load units
+			for i,v in ipairs(preload_units) do
+				self:EventHandler_UnitCreated(v)
+			end
+			preload_units = nil
+			self.HALReady = true
+			-- Initial locked timer
+			if GameLib.IsMouseLockOn() then
+				self:StartHAL()
+			end
+		end)
+	end
 end
 
 function Lockdown:StartHAL()
-	if self.settings.auto_target and self.HALReady then
+	if self.HALReady then
 		self.timerHAL:Start()
 	end
 end
