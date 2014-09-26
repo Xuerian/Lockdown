@@ -540,11 +540,13 @@ local pReticle, nReticleRadius
 local nLastTargetTime, uLastTarget, uDelayedTarget = 0
 function Lockdown:TimerHandler_HAL()
 	if not player then return end
+	local nTargetTimeDelta = os.clock() - nLastTargetTime
+	if nTargetTimeDelta < 0.2 then return end -- Throttle target flickering
 	-- Grab local references to things we're going to use each iteration
 	local NewPoint, PointLength = Vector2.New, pReticle.Length
 	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
 	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
-	local uCurrentTarget, nTargetTimeDelta = GameLib.GetTargetUnit(), os.clock() - nLastTargetTime
+	local uCurrentTarget = GameLib.GetTargetUnit()
 	-- Iterate over onscreen units
 	for id, unit in pairs(onscreen) do
 		local tPos = GetUnitScreenPosition(unit)
