@@ -465,7 +465,7 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	local utype = unit:GetType()
 	-- Filter units
 	--  Players (Except Player)
-	if (utype == "Player" and not unit:IsThePlayer())
+	if utype == "Player"
 		-- NPCs that get plates
 		or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate())
 		-- Harvestable nodes (Except farming)
