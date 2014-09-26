@@ -539,7 +539,7 @@ end
  -- If reticle center within range of unit center (reticle size vs estimated object size)
  -- If object meets criteria (Node range, ally health)
 local pReticle, nReticleRadius
-local nLastTargetTime, uLastTarget, uDelayedTarget = 0
+local nLastTargetTime, uLastTarget, uDelayedTarget, uCurrentTarget = 0
 function Lockdown:TimerHandler_HAL()
 	if not player then return end
 	local nTargetTimeDelta = os.clock() - nLastTargetTime
@@ -548,7 +548,7 @@ function Lockdown:TimerHandler_HAL()
 	local NewPoint, PointLength = Vector2.New, pReticle.Length
 	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
 	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
-	local uCurrentTarget = GameLib.GetTargetUnit()
+	uCurrentTarget = GameLib.GetTargetUnit()
 	-- Iterate over onscreen units
 	for id, unit in pairs(onscreen) do
 		local tPos = GetUnitScreenPosition(unit)
@@ -568,7 +568,7 @@ function Lockdown:TimerHandler_HAL()
 			if PointLength(pUnit - pReticle) < (nUnitRadius + nReticleRadius) then
 				if not uCurrentTarget or (uCurrentTarget ~= unit and (uLastTarget ~= unit or nTargetTimeDelta > 15)) then
 					GameLib.SetTargetUnit(unit)
-					uLastTarget, nLastTargetTime = unit, os.clock()
+					uLastTarget, nLastTargetTime = uCurrentTarget, os.clock()
 				end
 				return
 			end
