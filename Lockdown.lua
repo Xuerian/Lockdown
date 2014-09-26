@@ -505,24 +505,29 @@ end
 
 function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
 	local unit = ctrl:GetData()
-	if unit:IsValid() and self.tTargetDispositions[unit:GetDispositionTo(player)] then
-		-- Don't show useless simple units
-		 -- They might change state though, so we still
-		 -- have to watch all of them
-		if unit:GetType() == "Simple" then
-			local reward, show = unit:GetRewardInfo()
-			if reward and reward[1] then
-				for k,v in pairs(reward) do
-					if (v.strType == "Quest" and v.nCompleted and v.nCompleted < v.nNeeded)
-						 or (v.strType == "Scientist" and is_scientist) then
-						show = true
-						break
+	if unit:IsValid() and not unit:IsDead() then
+		if visible and self.tTargetDispositions[unit:GetDispositionTo(player)] then
+			-- Don't show useless simple units
+			 -- They might change state though, so we still
+			 -- have to watch all of them
+			local show = true
+			if unit:GetType() == "Simple" then
+				show = false
+				local reward = unit:GetRewardInfo()
+				if reward and reward[1] then
+					for k,v in pairs(reward) do
+						if (v.strType == "Quest" and v.nCompleted and v.nCompleted < v.nNeeded)
+							 or (v.strType == "Scientist" and is_scientist) then
+							show = true
+							break
+						end
 					end
 				end
 			end
-			visible = show and visible or false
+			onscreen[unit:GetId()] = show and unit or nil
+		else
+			onscreen[unit:GetId()] = nil
 		end
-		onscreen[unit:GetId()] = visible and unit or nil
 	else
 		self:EventHandler_UnitDestroyed(unit)
 	end
