@@ -26,7 +26,6 @@ local tAdditionalWindows = {
 	"GuildDesignerForm",
 	"SupplySachelForm",
 	"ViragsSocialMainForm",
-	"InterruptProgress", -- ZInterrupt
 }
 
 -- Add windows to ignore here
@@ -47,6 +46,8 @@ local tIgnoreWindows = {
 	WeaponIndicator = true,
 	-- Killing blow mod
 	KillingBlowAlert = true,
+	-- ZInterrupt
+	InterruptProgress = true,
 }
 
 -- Add windows to be checked at a high rate here
