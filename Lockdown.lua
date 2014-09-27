@@ -518,8 +518,8 @@ local function IsUnitInteresting(unit)
 	return false
 end
 
-function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
-	local unit = ctrl:GetData()
+function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
+	local unit = ctrl and ctrl:GetData() or unit
 	if unit:IsValid() and not unit:IsDead() then
 		if visible and ((unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(player)]) or IsUnitInteresting(unit)) then
 			onscreen[unit:GetId()] = unit
@@ -560,21 +560,24 @@ function Lockdown:TimerHandler_HAL()
 				nUnitRadius = (tPos.nY - pOverhead.y)/2
 			end
 			-- Check reticle intersection
-			-- TODO: Re-add delayed targeting
 			local nDist = PointLength(NewPoint(tPos.nX, tPos.nY - nUnitRadius) - pReticle)
 			if nDist < nBest and nDist < (nUnitRadius + nReticleRadius) then
-				nBest, uBest = nDist, unit
+				-- Verify possibly stale units
+				if unit == uLastAutoTarget and not uCurrentTarget then
+					local id = unit:GetId()
+					self:EventHandler_WorldLocationOnScreen(nil, nil, true, unit)
+					if onscreen[id] then
+						nBest, uBest = nDist, unit
+					end
+				else
+					nBest, uBest = nDist, unit
+				end
 			end
 		end
 	end
 	-- Target best unit
+	-- TODO: Re-add delayed targeting
 	if uBest and uCurrentTarget ~= uBest then
-		-- Avoid trying to retarget unavailable units
-		if uBest == uLastAutoTarget then
-			self:EventHandler_WorldLocationOnScreen(nil, markers[uBest:GetId()], GameLib.GetUnitScreenPosition(uBest).bOnScreen)
-			return
-		end
-		-- Set target
 		uCurrentTarget, uLastAutoTarget = uBest, uBest
 		GameLib.SetTargetUnit(uBest)
 		nLastTargetTime = os.clock()
