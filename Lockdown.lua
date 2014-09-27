@@ -466,16 +466,16 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	local utype = unit:GetType()
 	-- Filter units
 	--  Players (Except Player)
-	if utype == "Player"
+	if utype == "Player" or utype == "NonPlayer" or unit:GetRewardInfo()
 		-- NPCs that get plates
-		or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate())
+		-- or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate())
 		-- Harvestable nodes (Except farming)
 		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()))
 		then
 			-- Ok!
 	 -- Quest objective units, scannables
 	 -- These are filtered in WorldLocationOnScreen, since they can change.
-	elseif utype == "Simple" and unit:GetRewardInfo() then
+	-- elseif (utype == "Simple" or utype == "NonPlayer") and unit:GetRewardInfo() then
 		-- Ok!
 	else return end -- Not ok.
 	-- Activate marker
@@ -556,7 +556,7 @@ function Lockdown:TimerHandler_HAL()
 		if unit == player or unit:IsDead() then
 			self:EventHandler_UnitDestroyed(unit)
 		-- Verify that unit is still on screen
-		elseif tPos and tPos.bOnScreen and (not GetType(unit) == "Simple" or not unit:IsOccluded()) then
+		elseif tPos and tPos.bOnScreen and not unit:IsOccluded() then
 			-- Try to place unit point in middle of unit
 			local pOverhead, nUnitRadius = GetOverheadAnchor(unit), 0
 			if pOverhead then
