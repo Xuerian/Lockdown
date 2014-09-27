@@ -500,7 +500,7 @@ function Lockdown:EventHandler_UnitDestroyed(unit)
 		onscreen[id] = nil
 	end
 	if GameLib.IsMouseLockOn() and unit == GameLib.GetTargetUnit() then
-		uCurrentTarget, uLastTarget = nil, nil
+		uCurrentTarget = nil
 		GameLib.SetTargetUnit()
 	end
 end
@@ -535,16 +535,17 @@ end
  -- If reticle center within range of unit center (reticle size vs estimated object size)
  -- If object meets criteria (Node range, ally health)
 local pReticle, nReticleRadius
-local nLastTargetTime, uLastTarget, uDelayedTarget, uCurrentTarget = 0
+local nLastTargetTime, uDelayedTarget, uCurrentTarget, uLastAutoTarget = 0
 function Lockdown:TimerHandler_HAL()
 	if not player then return end
-	local nTargetTimeDelta = os.clock() - nLastTargetTime
-	if nTargetTimeDelta < 0.2 then return end -- Throttle target flickering
+	-- Prevent excessive flickering
+	if (os.clock() - nLastTargetTime) < 0.2 then return end
 	-- Grab local references to things we're going to use each iteration
 	local NewPoint, PointLength = Vector2.New, pReticle.Length
 	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
 	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
 	uCurrentTarget = GameLib.GetTargetUnit()
+	local nBest, uBest = 999
 	-- Iterate over onscreen units
 	for id, unit in pairs(onscreen) do
 		local tPos = GetUnitScreenPosition(unit)
@@ -558,17 +559,25 @@ function Lockdown:TimerHandler_HAL()
 			if pOverhead then
 				nUnitRadius = (tPos.nY - pOverhead.y)/2
 			end
-			local pUnit = NewPoint(tPos.nX, tPos.nY - nUnitRadius)
 			-- Check reticle intersection
 			-- TODO: Re-add delayed targeting
-			if PointLength(pUnit - pReticle) < (nUnitRadius + nReticleRadius) then
-				if not uCurrentTarget or (uCurrentTarget ~= unit and (uLastTarget ~= unit or nTargetTimeDelta > 15)) then
-					GameLib.SetTargetUnit(unit)
-					uLastTarget, nLastTargetTime = uCurrentTarget, os.clock()
-				end
-				return
+			local nDist = PointLength(NewPoint(tPos.nX, tPos.nY - nUnitRadius) - pReticle)
+			if nDist < nBest and nDist < (nUnitRadius + nReticleRadius) then
+				nBest, uBest = nDist, unit
 			end
 		end
+	end
+	-- Target best unit
+	if uBest and uCurrentTarget ~= uBest then
+		-- Avoid trying to retarget unavailable units
+		if uBest == uLastAutoTarget then
+			self:EventHandler_WorldLocationOnScreen(nil, markers[uBest:GetId()], GameLib.GetUnitScreenPosition(uBest).bOnScreen)
+			return
+		end
+		-- Set target
+		uCurrentTarget, uLastAutoTarget = uBest, uBest
+		GameLib.SetTargetUnit(uBest)
+		nLastTargetTime = os.clock()
 	end
 end
 
@@ -1084,7 +1093,7 @@ end
 
 function Lockdown:EventHandler_TargetUnitChanged()
 	if not GameLib.GetTargetUnit() then
-		uLastTarget = nil
+		uCurrentTarget = nil
 	end
 	uLockedTarget = nil
 end
