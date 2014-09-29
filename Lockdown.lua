@@ -506,30 +506,48 @@ function Lockdown:EventHandler_UnitDestroyed(unit)
 	end
 end
 
-local function IsUnitInteresting(unit)
-	local reward = unit:GetRewardInfo()
-	if reward and reward[1] then
-		for k,v in pairs(reward) do
-			if (v.strType == "Quest" and v.nCompleted and v.nCompleted < v.nNeeded)
-				 or (v.strType == "Scientist" and is_scientist) then
-				return true
+-- Check a marker (Unit) that just entered or left the screen
+function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
+	unit = unit or ctrl:GetData()
+	-- Purge invalid or dead units
+	if not unit:IsValid() or unit:IsDead() then
+		self:EventHandler_UnitDestroyed(unit)
+		return
+	-- Visible units
+	elseif visible then
+		-- Basic relevance
+		if unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(player)] then
+			onscreen[unit:GetId()] = unit
+			return
+		end			
+		-- Units we want based on activation state
+		local tActivation = unit:GetActivationState()
+		-- Ignore settler "Minfrastructure"
+		if tActivation and not tActivation.SettlerMinfrastructure then
+			for k,v in pairs(tActivation) do
+				if v.bCanInteract or v.bIsHighlightable or v.bShowCallout then
+					onscreen[unit:GetId()] = unit
+					return
+				end
+			end
+		end
+		-- Units we want based on quest or path status
+		local tReward = unit:GetRewardInfo()
+		if tReward then
+			for i=1,#tReward do
+				local t = tReward[i]
+				-- Quest items we need and haven't interacted with
+				if (t.strType == "Quest" and t.nCompleted and t.nCompleted < t.nNeeded and (not tActivation or tActivation.bCanInteract))
+					-- or scientist scans
+					 or (t.strType == "Scientist" and is_scientist) then
+					onscreen[unit:GetId()] = unit
+					return
+				end
 			end
 		end
 	end
-	return false
-end
-
-function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
-	local unit = ctrl and ctrl:GetData() or unit
-	if unit:IsValid() and not unit:IsDead() then
-		if visible and ((unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(player)]) or IsUnitInteresting(unit)) then
-			onscreen[unit:GetId()] = unit
-		else
-			onscreen[unit:GetId()] = nil
-		end
-	else
-		self:EventHandler_UnitDestroyed(unit)
-	end
+	-- Invisible or otherwise undesirable units
+	onscreen[unit:GetId()] = nil
 end
 
 -- Scan lists of markers in order of priority based on current state
