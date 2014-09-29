@@ -73,7 +73,7 @@ local tLocalization = {
 		button_label_mod = "Modifier",
 
 		Title_tweaks = "Tweaks",
-		mouselockrebind = "Orange settings require included ahk script, read the Lockdown Curse page for details. Orange and yellow settings require a UI reload to take effect.",
+		Text_mouselockrebind = "Orange settings require included ahk script, read the Lockdown Curse page for details. Orange and yellow settings require a UI reload to take effect.",
 
 		togglelock = "Toggle Lockdown",
 		locktarget = "Lock/Unlock current target",
@@ -859,9 +859,6 @@ function Lockdown:UpdateConfigUI()
 		-- Reference all children by name
 		self.w = children_by_name(self.wndOptions)
 		w = self.w
-
-		-- Localize strings
-		w.Text_mouselockrebind:SetText(L.mouselockrebind)
 
 		-- Options children cache
 		--[=[ 	w = setmetatable({}, {__index = function(t, k)
