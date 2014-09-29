@@ -127,6 +127,7 @@ local Lockdown = {
 		auto_target_hostile = true,
 		auto_target_friendly = true,
 		auto_target_delay = 0,
+		auto_target_interval = 100,
 		reticle_opacity = 0.3,
 		reticle_size = 32,
 		reticle_sprite = "giznat",
@@ -407,7 +408,7 @@ function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Defer advanced targeting startup
 	if self.settings.auto_target then
-		self.timerHAL = ApolloTimer.Create(0.05, true, "TimerHandler_HAL", self)
+		self.timerHAL = ApolloTimer.Create(self.settings.auto_target_interval/1000, true, "TimerHandler_HAL", self)
 		self.timerHAL:Stop()
 
 		TinyAsync:Wait(function()
