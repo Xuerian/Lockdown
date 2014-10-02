@@ -466,6 +466,11 @@ local markers = {}
 local onscreen = {}
 
 function Lockdown:RefreshUnit(unit)
+	-- Catch newly activateable units
+	if not markers[unit:GetId()] then
+		self:EventHandler_UnitCreated(unit)
+	end
+	-- Qualify unit
 	self:EventHandler_WorldLocationOnScreen(nil, nil, GameLib.GetUnitScreenPosition(unit).bOnScreen, unit)
 end
 
@@ -477,11 +482,11 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	local utype = unit:GetType()
 	-- Filter units
 	--  Players (Except Player)
-	if utype == "Player" or utype == "NonPlayer" or unit:GetRewardInfo()
+	if utype == "Player" or utype == "NonPlayer" or unit:GetRewardInfo() or unit:GetActivationState()
 		-- NPCs that get plates
 		-- or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate())
 		-- Harvestable nodes (Except farming)
-		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(GameLib.GetPlayerUnit()))
+		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(player))
 		then
 			-- Ok!
 	 -- Quest objective units, scannables
