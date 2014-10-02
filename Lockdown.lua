@@ -428,6 +428,7 @@ function Lockdown:OnLoad()
 			Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
 			Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
 			Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
+			Apollo.RegisterEventHandler("UnitActivationTypeChanged", "RefreshUnit", self)
 			-- Process pre-load units
 			for i,v in ipairs(preload_units) do
 				self:EventHandler_UnitCreated(v)
@@ -464,6 +465,10 @@ end
 local markers = {}
 local onscreen = {}
 
+function Lockdown:RefreshUnit(unit)
+	self:EventHandler_WorldLocationOnScreen(nil, nil, GameLib.GetUnitScreenPosition(unit).bOnScreen, unit)
+end
+
 -- Store category of marker
 function Lockdown:EventHandler_UnitCreated(unit)
 	local id = unit:GetId()
@@ -491,9 +496,7 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	marker:SetUnit(unit)
 	markers[id] = marker
 
-	if GameLib.GetUnitScreenPosition(unit).bOnScreen then
-		self:EventHandler_WorldLocationOnScreen(nil, marker, true)
-	end
+	self:RefreshUnit(unit)
 end
 
 function Lockdown:EventHandler_UnitDestroyed(unit)
