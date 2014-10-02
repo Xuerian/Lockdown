@@ -542,6 +542,12 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 				onscreen[unit:GetId()] = nil
 				return
 			end
+			-- Generic activateable objects
+			local t = tAct.Interact
+			if t and (t.bCanInteract or t.bIsHighlightable or t.bShowCallout) then
+				onscreen[unit:GetId()] = unit
+				return
+			end
 			end
 		end
 		-- Units we want based on quest or path status
