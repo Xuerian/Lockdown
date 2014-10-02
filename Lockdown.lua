@@ -576,16 +576,17 @@ function Lockdown:TimerHandler_HAL()
 	local NewPoint, PointLength = Vector2.New, pReticle.Length
 	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
 	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
+	local IsDead, IsOccluded = player.IsDead, player.IsOccluded
 	uCurrentTarget = GameLib.GetTargetUnit()
 	local nBest, uBest = 999
 	-- Iterate over onscreen units
 	for id, unit in pairs(onscreen) do
 		local tPos = GetUnitScreenPosition(unit)
 		-- Destroy player markers we shouldn't be getting
-		if unit == player or unit:IsDead() then
+		if unit == player or IsDead(unit) then
 			self:EventHandler_UnitDestroyed(unit)
 		-- Verify that unit is still on screen
-		elseif tPos and tPos.bOnScreen and not unit:IsOccluded() then
+		elseif tPos and tPos.bOnScreen and not IsOccluded(unit) then
 			-- Try to place unit point in middle of unit
 			local pOverhead, nUnitRadius = GetOverheadAnchor(unit), 0
 			if pOverhead then
