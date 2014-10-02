@@ -548,6 +548,10 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 				onscreen[unit:GetId()] = unit
 				return
 			end
+			-- Quest turn-ins
+			if tAct.QuestReward and tAct.QuestReward.bIsActive and tAct.QuestReward.bCanInteract then
+				onscreen[unit:GetId()] = unit
+				return
 			end
 		end
 		-- Units we want based on quest or path status
