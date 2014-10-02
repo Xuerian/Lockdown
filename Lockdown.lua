@@ -126,6 +126,7 @@ local Lockdown = {
 		auto_target_neutral = false,
 		auto_target_hostile = true,
 		auto_target_friendly = false,
+		auto_target_settler = false,
 		auto_target_delay = 0,
 		auto_target_interval = 100,
 		reticle_opacity = 0.3,
@@ -146,6 +147,8 @@ local Lockdown = {
 	settings = {},
 	reticles = {}
 }
+
+local opt = Lockdown.settings
 
 setmetatable(Lockdown.settings, {__index = Lockdown.defaults})
 
@@ -299,7 +302,7 @@ function Lockdown:OnRestore(eLevel, tData)
 	end
 end
 
-local preload_units, is_scientist, player = {}
+local preload_units, is_scientist, is_settler, player = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
@@ -417,7 +420,9 @@ function Lockdown:OnLoad()
 		end,
 		function()
 			-- Get player path
-			is_scientist = PlayerPathLib.GetPlayerPathType() == 2
+			local nPath = PlayerPathLib.GetPlayerPathType()
+			is_scientist = nPath == 2
+			is_settler = nPath == 1
 			-- Update event registration
 			Apollo.RemoveEventHandler("UnitCreated", self)
 			Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
@@ -521,14 +526,14 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 			return
 		end			
 		-- Units we want based on activation state
-		local tActivation = unit:GetActivationState()
+		local tAct = unit:GetActivationState()
 		-- Ignore settler "Minfrastructure"
-		if tActivation and not tActivation.SettlerMinfrastructure then
-			for k,v in pairs(tActivation) do
-				if v.bCanInteract or v.bIsHighlightable or v.bShowCallout then
-					onscreen[unit:GetId()] = unit
-					return
-				end
+		if tAct then
+			-- Settler collection or improvements
+			if is_settler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
+				onscreen[unit:GetId()] = nil
+				return
+			end
 			end
 		end
 		-- Units we want based on quest or path status
