@@ -328,6 +328,7 @@ function Lockdown:OnLoad()
 
 	----------------------------------------------------------
 	-- Options
+
 	Apollo.RegisterSlashCommand("lockdown", "OnConfigure", self)
 
 
@@ -417,6 +418,7 @@ function Lockdown:OnLoad()
 
 	----------------------------------------------------------
 	-- Defer advanced targeting startup
+
 	if self.settings.auto_target then
 		self.timerHAL = ApolloTimer.Create(self.settings.auto_target_interval/1000, true, "TimerHandler_HAL", self)
 		self.timerHAL:Stop()
