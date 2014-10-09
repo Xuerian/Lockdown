@@ -93,6 +93,9 @@ local tLocalization = {
 		reticle_hue_red = "Reticle hue (Red)",
 		reticle_hue_green = "Reticle hue (Green)",
 		reticle_hue_blue = "Reticle hue (Blue)",
+
+		message_target_locked = "Target locked: %s",
+		message_target_unlocked = "Target unlocked",
 	}
 }
 local L = setmetatable({}, {__index = tLocalization.en_us})
@@ -206,6 +209,13 @@ TinyAsync:Wait(function() return ChatAddon and ChatAddon.tWindow end, function()
 	print_buffer = nil
 end, 1)
 
+local function system_print(...)
+	if ChatSystemLib then
+		ChatSystemLib.PostOnChannel(2, table.concat({...}, ", "))
+	else
+		print(...)
+	end
+end
 
 ----------------------------------------------------------
 -- Helpers
@@ -1110,9 +1120,11 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	elseif iKey == locktarget_key and (not locktarget_mod or locktarget_mod()) then
 		if uLockedTarget then
 			uLockedTarget = nil
-			-- TODO: Locked target indicator instead of clearing target
+			system_print(L.message_target_unlocked)
+		-- TODO: Locked target indicator instead of clearing target
 		else
 			uLockedTarget = GameLib.GetTargetUnit()
+			system_print((L.message_target_locked):format(uLockedTarget:GetName()))
 		end
 	end
 end
@@ -1159,7 +1171,10 @@ function Lockdown:EventHandler_TargetUnitChanged()
 	if not GameLib.GetTargetUnit() then
 		uCurrentTarget = nil
 	end
-	uLockedTarget = nil
+	if uLockedTarget then
+		uLockedTarget = nil
+		system_print(L.message_target_unlocked)
+	end
 end
 
 
