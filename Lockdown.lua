@@ -592,9 +592,9 @@ end
  -- If reticle center within range of unit center (reticle size vs estimated object size)
  -- If object meets criteria (Node range, ally health)
 local pReticle, nReticleRadius
-local nLastTargetTime, uDelayedTarget, uCurrentTarget, uLastAutoTarget = 0
+local nLastTargetTime, uDelayedTarget, uCurrentTarget, uLastAutoTarget, uLockedTarget = 0
 function Lockdown:TimerHandler_HAL()
-	if not player then return end
+	if not player or uLockedTarget then return end
 	-- Prevent excessive flickering
 	if (os.clock() - nLastTargetTime) < 0.2 then return end
 	-- Grab local references to things we're going to use each iteration
