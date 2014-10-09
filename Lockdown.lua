@@ -316,6 +316,7 @@ function Lockdown:OnRestore(eLevel, tData)
 			self:OnConfigure()
 		end
 		self:SetActionMode(s.lock_on_load)
+		-- SendVarToRover("Lockdown", self)
 	end
 end
 
@@ -639,6 +640,7 @@ function Lockdown:TimerHandler_HAL()
 				-- Verify possibly stale units
 				if unit == uLastAutoTarget and not uCurrentTarget then
 					local id = unit:GetId()
+					-- SendVarToRover("Last lockdown target", unit)
 					self:EventHandler_WorldLocationOnScreen(nil, nil, true, unit)
 					if onscreen[id] then
 						nBest, uBest = nDist, unit
