@@ -105,6 +105,13 @@ local bActiveIntent
 
 
 ----------------------------------------------------------
+-- Local references
+
+local pairs, ipairs, table, string, math = pairs, ipairs, table, string, math
+local GameLib, Apollo = GameLib, Apollo
+
+
+----------------------------------------------------------
 -- Settings
 
 -- Defaults
