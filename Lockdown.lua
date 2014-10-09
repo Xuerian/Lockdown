@@ -639,10 +639,9 @@ function Lockdown:TimerHandler_HAL()
 			if nDist < nBest and nDist < (nUnitRadius + nReticleRadius) then
 				-- Verify possibly stale units
 				if unit == uLastAutoTarget and not uCurrentTarget then
-					local id = unit:GetId()
 					-- SendVarToRover("Last lockdown target", unit)
 					self:EventHandler_WorldLocationOnScreen(nil, nil, true, unit)
-					if onscreen[id] then
+					if onscreen[unit:GetId()] then
 						nBest, uBest = nDist, unit
 					end
 				else
