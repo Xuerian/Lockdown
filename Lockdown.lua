@@ -608,6 +608,10 @@ function Lockdown:TimerHandler_HAL()
 			local pOverhead, nUnitRadius = GetOverheadAnchor(unit), 0
 			if pOverhead then
 				nUnitRadius = (tPos.nY - pOverhead.y)/2
+				-- Sanity check radius
+				if nUnitRadius < 0 then
+					nUnitRadius = 15
+				end
 			end
 			-- Check reticle intersection
 			local nDist = PointLength(NewPoint(tPos.nX, tPos.nY - nUnitRadius) - pReticle)
