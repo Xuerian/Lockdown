@@ -545,6 +545,11 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 		-- Ignore settler "Minfrastructure"
 		if tAct then
 			-- Settler collection or improvements
+			-- Hide already activated quest objects
+			if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
+				onscreen[unit:GetId()] = nil
+				return
+			end
 			if is_settler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
 				onscreen[unit:GetId()] = nil
 				return
