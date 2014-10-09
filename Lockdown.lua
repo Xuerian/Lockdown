@@ -527,6 +527,8 @@ function Lockdown:EventHandler_UnitDestroyed(unit)
 end
 
 -- Check a marker (Unit) that just entered or left the screen
+--  This function could possibly structured better
+--  However, this is the way that most made sense at the time
 function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 	unit = unit or ctrl:GetData()
 	-- Purge invalid or dead units
@@ -543,13 +545,14 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 		-- Units we want based on activation state
 		local tAct = unit:GetActivationState()
 		-- Ignore settler "Minfrastructure"
+		-- TODO: Options to include/filter these things
 		if tAct then
-			-- Settler collection or improvements
 			-- Hide already activated quest objects
 			if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
 				onscreen[unit:GetId()] = nil
 				return
 			end
+			-- Hide settler collection or improvements
 			if is_settler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
 				onscreen[unit:GetId()] = nil
 				return
