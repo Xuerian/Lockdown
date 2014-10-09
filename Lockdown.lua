@@ -1,7 +1,7 @@
 -- Addon authors or Carbine, to add a window to the list of pausing windows, call this for normal windows
 -- Event_FireGenericEvent("CombatMode_RegisterPausingWindow", wndHandle[, bCheckOften])
 
--- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful.
+-- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful. 
 
 
 ----------------------------------------------------------
