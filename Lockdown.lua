@@ -3,6 +3,10 @@
 
 -- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful.
 
+
+----------------------------------------------------------
+-- Window lists
+
 -- Add windows that don't close on escape here
 -- Many Carbine windows must be caught via event handlers
 -- since they get recreated and handles go stale. 
@@ -20,7 +24,8 @@ local tAdditionalWindows = {
 	"ResurrectDialog",
 	"ExitInstanceDialog",
 	"GuildDesignerForm",
-	"SupplySachelForm"
+	"SupplySachelForm",
+	"ViragsSocialMainForm",
 }
 
 -- Add windows to ignore here
@@ -41,6 +46,8 @@ local tIgnoreWindows = {
 	WeaponIndicator = true,
 	-- Killing blow mod
 	KillingBlowAlert = true,
+	-- ZInterrupt
+	InterruptProgress = true,
 }
 
 -- Add windows to be checked at a high rate here
@@ -54,35 +61,41 @@ local tHotList = {
 	QuestWindow_Holo = true,
 }
 
+
+----------------------------------------------------------
 -- Localization
+
 local tLocalization = {
 	en_us = {
 		button_configure = "Lockdown",
 		button_label_bind = "Click to change",
 		button_label_bind_wait = "Press new key",
-		button_label_mod = "Modifier",
+		button_label_mod = "No modifier",
 
 		Title_tweaks = "Tweaks",
-		mouselockrebind = "Orange settings require the .ahk script. Reload both UI and .ahk script after changing. See the Lockdown Curse page for details.",
+		Text_mouselockrebind = "Orange settings require included ahk script, read the Lockdown Curse page for details. Orange and yellow settings require a UI reload to take effect.",
 
 		togglelock = "Toggle Lockdown",
 		locktarget = "Lock/Unlock current target",
-		targetmouseover = "Target unit in reticle",
+		manualtarget = "Manual target",
 		Widget_free_with = "Free cursor while holding..",
 		free_also_toggles = "Free cursor acts as toggle (Unfinished)",
 		lock_on_load = "Lock on startup",
 		ahk_cursor_center = "Center cursor on lock",
 		ahk_update_interval = "AHK update interval [ms]",
-		reticle_target = "Reticle targeting",
-		reticle_target_delay = "Reticle target delay",
+		auto_target = "Reticle targeting",
 		reticle_show = "Show reticle",
+		auto_target_delay = "Reticle target delay",
 		reticle_opacity = "Reticle opacity",
 		reticle_size = "Reticle size",
-		reticle_offset_y = "Vert offset (not targeting)",
-		reticle_offset_x = "Horiz offset (not targeting)",
+		reticle_offset_y = "Vertical offset",
+		reticle_offset_x = "Horizontal offset",
 		reticle_hue_red = "Reticle hue (Red)",
 		reticle_hue_green = "Reticle hue (Green)",
 		reticle_hue_blue = "Reticle hue (Blue)",
+
+		message_target_locked = "Target locked: %s",
+		message_target_unlocked = "Target unlocked",
 	}
 }
 local L = setmetatable({}, {__index = tLocalization.en_us})
@@ -91,6 +104,18 @@ local L = setmetatable({}, {__index = tLocalization.en_us})
 -- I don't even know who this is from
 -- Three different mods have three different versions
 local SystemKeyMap
+local bActiveIntent
+
+
+----------------------------------------------------------
+-- Local references
+
+local pairs, ipairs, table, string, math = pairs, ipairs, table, string, math
+local GameLib, Apollo = GameLib, Apollo
+
+
+----------------------------------------------------------
+-- Settings
 
 -- Defaults
 local Lockdown = {
@@ -100,18 +125,20 @@ local Lockdown = {
 		togglelock_mod = false,
 		locktarget_key = 20, -- Caps Lock
 		locktarget_mod = false,
-		targetmouseover_key = 84, -- T
-		targetmouseover_mod = "control",
+		manualtarget_key = 84, -- T
+		manualtarget_mod = "control",
 		free_with_shift = false,
 		free_with_ctrl = false,
 		free_with_alt = true,
 		free_also_toggles = false,
 		reticle_show = true,
-		reticle_target = true,
-		reticle_target_neutral = true,
-		reticle_target_hostile = true,
-		reticle_target_friendly = true,
-		reticle_target_delay = 0,
+		auto_target = true,
+		auto_target_neutral = false,
+		auto_target_hostile = true,
+		auto_target_friendly = false,
+		auto_target_settler = false,
+		auto_target_delay = 0,
+		auto_target_interval = 100,
 		reticle_opacity = 0.3,
 		reticle_size = 32,
 		reticle_sprite = "giznat",
@@ -131,20 +158,67 @@ local Lockdown = {
 	reticles = {}
 }
 
-for k,v in pairs(Lockdown.defaults) do
-	Lockdown.settings[k] = v
-end
+local opt = Lockdown.settings
 
-local bActiveIntent
+setmetatable(Lockdown.settings, {__index = Lockdown.defaults})
 
--- Helpers
-local function print(...)
-	local out = {}
-	for i=1,select('#', ...) do
-		table.insert(out, tostring(select(i, ...)))
+
+----------------------------------------------------------
+-- TinyAsync, because WildStar
+
+local TinyAsync = { timers = {}, i = 0 }
+function TinyAsync:Wait(fCondition, fAction, nfDelay)
+	local i = self.i
+	local timer = ApolloTimer.Create(nfDelay or 0.1, true, "Timer_"..i, self)
+	self.timers[i] = timer
+	-- Apparently ApolloTimer doesn't like numerical function keys
+	self["Timer_"..i] = function()
+		if fCondition() then
+			timer:Stop()
+			fAction()
+			-- Release
+			self.timers[i] = nil
+			self["Timer_"..i] = nil
+		end
 	end
-	Print(table.concat(out, ", "))
+	self.i = i + 1
+	return i
 end
+
+
+----------------------------------------------------------
+-- I want my print(), and I want my print() whenitwillactuallywork!
+
+local print_buffer = {}
+local function print(...)
+	table.insert(print_buffer, {...})
+end
+
+TinyAsync:Wait(function() return ChatAddon and ChatAddon.tWindow end, function()
+	function print(...)
+		local out = {}
+		for i=1,select('#', ...) do
+			table.insert(out, tostring(select(i, ...)))
+		end
+		Print(table.concat(out, " "))
+	end
+	-- Process and clear buffer
+	for i,v in ipairs(print_buffer) do
+		print(unpack(v))
+	end
+	print_buffer = nil
+end, 1)
+
+local function system_print(...)
+	if ChatSystemLib then
+		ChatSystemLib.PostOnChannel(2, table.concat({...}, ", "))
+	else
+		print(...)
+	end
+end
+
+----------------------------------------------------------
+-- Helpers
 
 -- Wipe a table for reuse
 local function wipe(t)
@@ -153,10 +227,28 @@ local function wipe(t)
 	end
 end
 
--- Startup
+-- Load all form elements into a table by name
+local function children_by_name(wnd, t)
+	local t = t or {}
+	for _,child in ipairs(wnd:GetChildren()) do
+		t[child:GetName()] = child
+		children_by_name(child, t)
+	end
+	return t
+end
+
+
+----------------------------------------------------------
+-- Because Carbine does it
+
 function Lockdown:Init()
 	Apollo.RegisterAddon(self, true, L.button_configure)
+	Apollo.RegisterEventHandler("UnitCreated", "PreloadHandler_UnitCreated", self)
 end
+
+
+----------------------------------------------------------
+-- Easy event handlers
 
 -- Register a window update for a given event
 function Lockdown:AddWindowEventListener(sEvent, sName)
@@ -181,12 +273,22 @@ function Lockdown:AddDelayedWindowEventListener(sEvent, sName)
 	end
 end
 
+
+----------------------------------------------------------
+-- Saved data
+
 function Lockdown:OnSave(eLevel)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.General then
 		local s = self.settings
 		s.ahk_lmb = SystemKeyMap[s.ahk_lmb_key] or ""
 		s.ahk_rmb = SystemKeyMap[s.ahk_rmb_key] or ""
 		s.ahk_mmb = SystemKeyMap[s.ahk_mmb_key] or ""
+		-- Don't save defaults
+		for k,v in pairs(s) do
+			if v == self.defaults[k] then
+				s[k] = nil
+			end
+		end
 		return s
 	end
 end
@@ -195,60 +297,61 @@ function Lockdown:OnRestore(eLevel, tData)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.General and tData then
 		local s = self.settings
 		-- Restore settings
-		for k,v in pairs(s) do
+		for k,v in pairs(self.defaults) do
 			if tData[k] ~= nil then
 				s[k] = tData[k]
 			end
 		end
+		-- Build settings dependent data
+		self.tTargetDispositions = {
+			[Unit.CodeEnumDisposition.Friendly] = s.auto_target_friendly,
+			[Unit.CodeEnumDisposition.Neutral] = s.auto_target_neutral,
+			[Unit.CodeEnumDisposition.Hostile] = s.auto_target_hostile
+		}
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
-		self.timerDelayedTarget:Set(s.reticle_target_delay / 1000, false)
+		self.timerDelayedTarget:Set(s.auto_target_delay / 1000, false)
 		-- Show settings window after reload
 		if tData._is_ahk_reload then
 			self:OnConfigure()
 		end
 		self:SetActionMode(s.lock_on_load)
+		-- SendVarToRover("Lockdown", self)
 	end
 end
 
-local function children_by_name(wnd, t)
-	local t = t or {}
-	for _,child in ipairs(wnd:GetChildren()) do
-		t[child:GetName()] = child
-		children_by_name(child, t)
-	end
-	return t
-end
-
+local preload_units, is_scientist, is_settler, player = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
-	self.wndReticle = Apollo.LoadForm("Lockdown.xml", "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
+
+	self.xmlDoc = XmlDoc.CreateFromFile("Lockdown.xml")
+	self.wndReticle = Apollo.LoadForm(self.xmlDoc, "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
 	self.wndReticleSpriteTarget = self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget")
 
 	-- Add reticles
 	self:AddReticle("tiny", [[Lockdown\reticles\tiny.png]], 128)
 	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 128)
-	self.wndReticle:Show(false)
 	self:Reticle_Update()
+	self.wndReticle:Show(GameLib.IsMouseLockOn())
 	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_Update", self)
 
-	-- For some reason on reloadui, the mouse locks in the NE screen quadrant
-	ApolloTimer.Create(0.7, false, "TimerHandler_InitialLock", self)
 
 	----------------------------------------------------------
 	-- Options
+
 	Apollo.RegisterSlashCommand("lockdown", "OnConfigure", self)
+
 
 	----------------------------------------------------------
 	-- Targeting
-	-- TODO: Only do this when settings.reticle_target is on
-	Apollo.RegisterEventHandler("MouseOverUnitChanged", "EventHandler_MouseOverUnitChanged", self)
+
 	Apollo.RegisterEventHandler("TargetUnitChanged", "EventHandler_TargetUnitChanged", self)
-self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
+	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerRelock:Stop()
 	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
 	self.timerDelayedTarget:Stop()
+
 
 	----------------------------------------------------------
 	-- Automatic [un]locking
@@ -266,7 +369,10 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerColdPulse = ApolloTimer.Create(0.5, true, "TimerHandler_ColdPulse", self)
 	self.timerHotPulse = ApolloTimer.Create(0.2, true, "TimerHandler_HotPulse", self)
 
-	-- External windows
+
+	----------------------------------------------------------
+	-- Windows and their relevant events
+
 	Apollo.RegisterEventHandler("CombatMode_RegisterPausingWindow", "RegisterWindow", self)
 
 	-- These windows are created or re-created and must be caught with event handlers
@@ -309,15 +415,250 @@ self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self:AddDelayedWindowEventListener("ShowBank", "BankViewerForm")
 	self:AddDelayedWindowEventListener("ToggleBank", "BankViewerForm")
 	
+
 	----------------------------------------------------------
 	-- Keybinds
+
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
 	self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
 
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
 	self:KeyOrModifierUpdated()
+
+
+	----------------------------------------------------------
+	-- Defer advanced targeting startup
+
+	if self.settings.auto_target then
+		self.timerHAL = ApolloTimer.Create(self.settings.auto_target_interval/1000, true, "TimerHandler_HAL", self)
+		self.timerHAL:Stop()
+
+		TinyAsync:Wait(function()
+			player = GameLib.GetPlayerUnit()
+			return player and player:IsValid()
+		end,
+		function()
+			-- Get player path
+			local nPath = PlayerPathLib.GetPlayerPathType()
+			is_scientist = nPath == 2
+			is_settler = nPath == 1
+			-- Update event registration
+			Apollo.RemoveEventHandler("UnitCreated", self)
+			Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
+			Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
+			Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
+			Apollo.RegisterEventHandler("UnitActivationTypeChanged", "RefreshUnit", self)
+			-- Process pre-load units
+			for i,v in ipairs(preload_units) do
+				self:EventHandler_UnitCreated(v)
+			end
+			preload_units = nil
+			self.HALReady = true
+			-- Initial locked timer
+			if GameLib.IsMouseLockOn() then
+				self:StartHAL()
+			end
+		end)
+	end
 end
+
+function Lockdown:StartHAL()
+	if self.HALReady then
+		self.timerHAL:Start()
+	end
+end
+
+function Lockdown:StopHAL()
+	if self.HALReady then
+		self.timerHAL:Stop()
+	end
+end
+
+----------------------------------------------------------
+-- Units and Advanced Targeting
+
+function Lockdown:PreloadHandler_UnitCreated(unit)
+	table.insert(preload_units, unit)
+end
+
+local markers = {}
+local onscreen = {}
+
+function Lockdown:RefreshUnit(unit)
+	-- Catch newly activateable units
+	if not markers[unit:GetId()] then
+		self:EventHandler_UnitCreated(unit)
+	end
+	-- Qualify unit
+	self:EventHandler_WorldLocationOnScreen(nil, nil, GameLib.GetUnitScreenPosition(unit).bOnScreen, unit)
+end
+
+-- Store category of marker
+function Lockdown:EventHandler_UnitCreated(unit)
+	local id = unit:GetId()
+	-- Invalid or existing markers
+	if not id or markers[id] or not unit:IsValid() or unit:IsThePlayer() then return nil end
+	local utype = unit:GetType()
+	-- Filter units
+	--  Players (Except Player)
+	if utype == "Player" or utype == "NonPlayer" or unit:GetRewardInfo() or unit:GetActivationState()
+		-- NPCs that get plates
+		-- or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate())
+		-- Harvestable nodes (Except farming)
+		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(player))
+		then
+			-- Ok!
+	 -- Quest objective units, scannables
+	 -- These are filtered in WorldLocationOnScreen, since they can change.
+	-- elseif (utype == "Simple" or utype == "NonPlayer") and unit:GetRewardInfo() then
+		-- Ok!
+	else return end -- Not ok.
+	-- Activate marker
+	local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
+	marker:Show()
+	marker:SetData(unit)
+	marker:SetUnit(unit)
+	markers[id] = marker
+
+	self:RefreshUnit(unit)
+end
+
+function Lockdown:EventHandler_UnitDestroyed(unit)
+	local id = unit:GetId()
+	if markers[id] then
+		markers[id]:Destroy()
+		markers[id] = nil
+	end
+	if onscreen[id] then
+		onscreen[id] = nil
+	end
+	if GameLib.IsMouseLockOn() and unit == GameLib.GetTargetUnit() then
+		uCurrentTarget = nil
+		GameLib.SetTargetUnit()
+	end
+end
+
+-- Check a marker (Unit) that just entered or left the screen
+--  This function could possibly structured better
+--  However, this is the way that most made sense at the time
+function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
+	unit = unit or ctrl:GetData()
+	-- Purge invalid or dead units
+	if not unit:IsValid() or unit:IsDead() then
+		self:EventHandler_UnitDestroyed(unit)
+		return
+	-- Visible units
+	elseif visible then
+		-- Basic relevance
+		if unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(player)] then
+			onscreen[unit:GetId()] = unit
+			return
+		end			
+		-- Units we want based on activation state
+		local tAct = unit:GetActivationState()
+		-- Ignore settler "Minfrastructure"
+		-- TODO: Options to include/filter these things
+		if tAct then
+			-- Hide already activated quest objects
+			if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
+				onscreen[unit:GetId()] = nil
+				return
+			end
+			-- Hide settler collection or improvements
+			if is_settler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
+				onscreen[unit:GetId()] = nil
+				return
+			end
+			-- Generic activateable objects
+			local t = tAct.Interact
+			if t and (t.bCanInteract or t.bIsHighlightable or t.bShowCallout) then
+				onscreen[unit:GetId()] = unit
+				return
+			end
+			-- Quest turn-ins
+			if tAct.QuestReward and tAct.QuestReward.bIsActive and tAct.QuestReward.bCanInteract then
+				onscreen[unit:GetId()] = unit
+				return
+			end
+		end
+		-- Units we want based on quest or path status
+		local tRewards = unit:GetRewardInfo()
+		if tRewards then
+			for i=1,#tRewards do
+				local t = tRewards[i]
+				-- Quest items we need and haven't interacted with
+				if (t.strType == "Quest" and t.nCompleted and t.nCompleted < t.nNeeded and (not tAct or not tAct.Interact or tAct.Interact.bCanInteract)) -- or #tAct == 0
+					-- or scientist scans
+					 or (t.strType == "Scientist" and is_scientist) then
+					onscreen[unit:GetId()] = unit
+					return
+				end
+			end
+		end
+	end
+	-- Invisible or otherwise undesirable units
+	onscreen[unit:GetId()] = nil
+end
+
+-- Scan lists of markers in order of priority based on current state
+ -- If reticle center within range of unit center (reticle size vs estimated object size)
+ -- If object meets criteria (Node range, ally health)
+local pReticle, nReticleRadius
+local nLastTargetTime, uDelayedTarget, uCurrentTarget, uLastAutoTarget, uLockedTarget = 0
+function Lockdown:TimerHandler_HAL()
+	if not player or uLockedTarget then return end
+	-- Prevent excessive flickering
+	if (os.clock() - nLastTargetTime) < 0.2 then return end
+	-- Grab local references to things we're going to use each iteration
+	local NewPoint, PointLength = Vector2.New, pReticle.Length
+	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
+	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
+	local IsDead, IsOccluded = player.IsDead, player.IsOccluded
+	uCurrentTarget = GameLib.GetTargetUnit()
+	local nBest, uBest = 999
+	-- Iterate over onscreen units
+	for id, unit in pairs(onscreen) do
+		local tPos = GetUnitScreenPosition(unit)
+		-- Destroy player markers we shouldn't be getting
+		if unit == player or IsDead(unit) then
+			self:EventHandler_UnitDestroyed(unit)
+		-- Verify that unit is still on screen
+		elseif tPos and tPos.bOnScreen and not IsOccluded(unit) then
+			-- Try to place unit point in middle of unit
+			local pOverhead, nUnitRadius = GetOverheadAnchor(unit), 0
+			if pOverhead then
+				nUnitRadius = (tPos.nY - pOverhead.y)/2
+				-- Sanity check radius
+				if nUnitRadius < 0 then
+					nUnitRadius = 15
+				end
+			end
+			-- Check reticle intersection
+			local nDist = PointLength(NewPoint(tPos.nX, tPos.nY - nUnitRadius) - pReticle)
+			if nDist < nBest and nDist < (nUnitRadius + nReticleRadius) then
+				-- Verify possibly stale units
+				if unit == uLastAutoTarget and not uCurrentTarget then
+					-- SendVarToRover("Last lockdown target", unit)
+					self:EventHandler_WorldLocationOnScreen(nil, nil, true, unit)
+					if onscreen[unit:GetId()] then
+						nBest, uBest = nDist, unit
+					end
+				else
+					nBest, uBest = nDist, unit
+				end
+			end
+		end
+	end
+	-- Target best unit
+	-- TODO: Re-add delayed targeting
+	if uBest and uCurrentTarget ~= uBest then
+		uCurrentTarget, uLastAutoTarget = uBest, uBest
+		GameLib.SetTargetUnit(uBest)
+		nLastTargetTime = os.clock()
+	end
+end
+
 
 ----------------------------------------------------------
 -- Frame discovery, handling, and polling
@@ -438,6 +779,7 @@ function Lockdown:TimerHandler_Relock()
 	self:SetActionMode(true)
 end
 
+
 ----------------------------------------------------------
 -- Configuration
 
@@ -445,11 +787,11 @@ end
 -- CAN'T TAKE THE CHANGE, MAN
 local ChangeHandlers = {}
 
-function ChangeHandlers.reticle_target_delay(value)
+function ChangeHandlers.auto_target_delay(value)
 	Lockdown.timerDelayedTarget:Set(value, false)
 end
 
-function ReticleChanged()
+local function ReticleChanged()
 	Lockdown.wndReticle:Show(true)
 	Lockdown:Reticle_Update()
 end
@@ -462,6 +804,16 @@ ChangeHandlers.reticle_hue_red = ReticleChanged
 ChangeHandlers.reticle_hue_green = ReticleChanged
 ChangeHandlers.reticle_hue_blue = ReticleChanged
 ChangeHandlers.reticle_sprite = ReticleChanged
+
+local function AutoTargetDisposition(sDisposition)
+	return function(value)
+		Lockdown.tTargetDispositions[Unit.CodeEnumDisposition[sDisposition]] = value
+	end
+end
+
+ChangeHandlers.auto_target_friendly = AutoTargetDisposition("Friendly")
+ChangeHandlers.auto_target_neutral = AutoTargetDisposition("Neutral")
+ChangeHandlers.auto_target_hostile = AutoTargetDisposition("Hostile")
 
 -- Per category widget handlers
 -- Binding keys
@@ -582,9 +934,6 @@ function Lockdown:UpdateConfigUI()
 		self.w = children_by_name(self.wndOptions)
 		w = self.w
 
-		-- Localize strings
-		w.Text_mouselockrebind:SetText(L.mouselockrebind)
-
 		-- Options children cache
 		--[=[ 	w = setmetatable({}, {__index = function(t, k)
 				local child = self.wndOptions:FindChild(k)
@@ -677,11 +1026,12 @@ function Lockdown:UpdateConfigUI()
 	self.w.Btn_Unbind:Show(false)
 end
 
+
 ----------------------------------------------------------
 -- Keybind handling
 
 -- Store key and modifier check function
-local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, targetmouseover_key, targetmouseover_mod
+local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, manualtarget_key, manualtarget_mod
 local function Upvalues(whichkey, whichmod)
 	local mod = Lockdown.settings[whichmod]
 	if mod == "shift" then
@@ -697,7 +1047,7 @@ end
 function Lockdown:KeyOrModifierUpdated()
 	togglelock_key, togglelock_mod = Upvalues("togglelock_key", "togglelock_mod")
 	locktarget_key, locktarget_mod = Upvalues("locktarget_key", "locktarget_mod")
-	targetmouseover_key, targetmouseover_mod = Upvalues("targetmouseover_key", "targetmouseover_mod")
+	manualtarget_key, manualtarget_mod = Upvalues("manualtarget_key", "manualtarget_mod")
 	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
 		self.timerFreeKeys:Start()
 	else
@@ -706,7 +1056,7 @@ function Lockdown:KeyOrModifierUpdated()
 end
 
 -- Keys
-local uLockedTarget
+
 function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Listen for key to bind
 	if self.bind_mode_active and iKey ~= 0xF1 and iKey ~= 0xF2 then
@@ -729,15 +1079,17 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 			end
 		end
 	
-	-- Static hotkeys, F7 and F8
+	-- Use vkeys to avoid overlapping player input
 	elseif iKey == 0xF1 then
 		self:SetActionMode(true, true)
 	elseif iKey == 0xF2 and not free_key_held then
 		self:SetActionMode(false, true)
 
-	-- Target mouseover
-	elseif iKey == targetmouseover_key and (not targetmouseover_mod or targetmouseover_mod()) then
-		GameLib.SetTargetUnit(GetMouseOverUnit())
+	-- Manual target
+	elseif iKey == manualtarget_key and (not manualtarget_mod or manualtarget_mod()) then
+		if uCurrentTarget then
+			GameLib.SetTargetUnit(uCurrentTarget)
+		end
 
 	-- Toggle mode
 	elseif iKey == togglelock_key and (not togglelock_mod or togglelock_mod()) then
@@ -769,10 +1121,11 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	elseif iKey == locktarget_key and (not locktarget_mod or locktarget_mod()) then
 		if uLockedTarget then
 			uLockedTarget = nil
-			GameLib.SetTargetUnit()
-			-- TODO: Locked target indicator instead of clearing target
+			system_print(L.message_target_unlocked)
+		-- TODO: Locked target indicator instead of clearing target
 		else
 			uLockedTarget = GameLib.GetTargetUnit()
+			system_print((L.message_target_locked):format(uLockedTarget:GetName()))
 		end
 	end
 end
@@ -809,39 +1162,22 @@ function Lockdown:TimerHandler_FreeKeys()
 	end
 end
 
-----------------------------------------------------------
--- Mouseover targeting
-
--- Targeting
-local uLastMouseover
-function Lockdown:EventHandler_MouseOverUnitChanged(unit)
-	local opt = self.settings
-	if unit and opt.reticle_target and GameLib.IsMouseLockOn() and (not uLockedTarget or uLockedTarget:IsDead()) then
-		local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
-		if ((opt.reticle_target_friendly and disposition == 2)
-			or (opt.reticle_target_neutral and disposition == 1)
-			or (opt.reticle_target_hostile and disposition == 0)) then
-			if opt.reticle_target_delay ~= 0 then
-				if unit ~= GameLib.GetTargetUnit() then
-					uLastMouseover = unit
-					self.timerDelayedTarget:Start()
-				else
-					self.timerDelayedTarget:Stop()
-				end
-			else
-				GameLib.SetTargetUnit(unit)
-			end
-		end
+function Lockdown:TimerHandler_DelayedTarget()
+	if uDelayedTarget then
+		GameLib.SetTargetUnit(uDelayedTarget)
 	end
 end
 
-function Lockdown:TimerHandler_DelayedTarget()
-	GameLib.SetTargetUnit(uLastMouseover)
+function Lockdown:EventHandler_TargetUnitChanged()
+	if not GameLib.GetTargetUnit() then
+		uCurrentTarget = nil
+	end
+	if uLockedTarget then
+		uLockedTarget = nil
+		system_print(L.message_target_unlocked)
+	end
 end
 
-function Lockdown:EventHandler_TargetUnitChanged()
-	uLockedTarget = nil
-end
 
 ----------------------------------------------------------
 -- Mode setters
@@ -852,7 +1188,10 @@ function Lockdown:SetActionMode(bState)
 	if GameLib.IsMouseLockOn() ~= bState then
 		GameLib.SetMouseLock(bState)
 	end
-	if not bState then
+	if bState then
+		self:StartHAL()
+	else
+		self:StopHAL()
 		bHotSuspend = false
 		bColdSuspend = false
 	end
@@ -865,6 +1204,7 @@ function Lockdown:ForceActionMode()
 	if not GameLib.IsMouseLockOn() then
 		GameLib.SetMouseLock(true)
 		self.wndReticle:Show(true)
+		self:StartHAL()
 	end
 	-- TODO: Indicate inactive-but-enabled status
 end
@@ -874,9 +1214,11 @@ function Lockdown:SuspendActionMode()
 	if GameLib.IsMouseLockOn() then
 		GameLib.SetMouseLock(false)
 		self.wndReticle:Show(false)
+		self:StopHAL()
 	end
 	-- TODO: Indicate active-but-suspended status
 end
+
 
 ----------------------------------------------------------
 -- Reticles
@@ -891,6 +1233,11 @@ function Lockdown:Reticle_Update()
 	self.wndReticleSpriteTarget:SetOpacity(s.reticle_opacity)
 	self.wndReticleSpriteTarget:SetSprite("reticles:"..s.reticle_sprite)
 	self.wndReticleSpriteTarget:SetBGColor(CColor.new(s.reticle_hue_red, s.reticle_hue_green, s.reticle_hue_blue))
+
+	local size = Apollo.GetDisplaySize()
+	local ret_x, ret_y = size.nWidth/2 + rox, size.nHeight/2 + roy
+	pReticle = Vector2.New(ret_x, ret_y)
+	nReticleRadius = n
 end
 
 function Lockdown:AddReticle(name, path, size)
