@@ -11,5 +11,5 @@ move-folders:
 	Lockdown/MouselockRebind/wildstar_icon.ico: Lockdown
 
 ignore:
-	- MouselockRebind/LICENSE
-	- MouselockRebind/README.md
+	- Lockdown/MouselockRebind/LICENSE
+	- Lockdown/MouselockRebind/README.md
