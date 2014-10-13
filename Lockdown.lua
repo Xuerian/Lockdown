@@ -529,13 +529,13 @@ function Lockdown:EventHandler_UnitDestroyed(unit)
 	if markers[id] then
 		markers[id]:Destroy()
 		markers[id] = nil
+		if GameLib.IsMouseLockOn() and unit == GameLib.GetTargetUnit() then
+			uCurrentTarget = nil
+			GameLib.SetTargetUnit()
+		end
 	end
 	if onscreen[id] then
 		onscreen[id] = nil
-	end
-	if GameLib.IsMouseLockOn() and unit == GameLib.GetTargetUnit() then
-		uCurrentTarget = nil
-		GameLib.SetTargetUnit()
 	end
 end
 
