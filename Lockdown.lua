@@ -1125,7 +1125,9 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		-- TODO: Locked target indicator instead of clearing target
 		else
 			uLockedTarget = GameLib.GetTargetUnit()
-			system_print((L.message_target_locked):format(uLockedTarget:GetName()))
+			if uLockedTarget and uLockedTarget:IsValid() then
+				system_print((L.message_target_locked):format(uLockedTarget:GetName()))
+			end
 		end
 	end
 end
