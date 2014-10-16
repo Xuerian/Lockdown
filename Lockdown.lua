@@ -158,6 +158,13 @@ local Lockdown = {
 	reticles = {}
 }
 
+-- Since OnRestore can trigger late (or not trigger), preset these
+Lockdown.tTargetDispositions = {
+	[Unit.CodeEnumDisposition.Friendly] = Lockdown.defaults.auto_target_friendly,
+	[Unit.CodeEnumDisposition.Neutral] = Lockdown.defaults.auto_target_neutral,
+	[Unit.CodeEnumDisposition.Hostile] = Lockdown.defaults.auto_target_hostile
+}
+
 local opt = Lockdown.settings
 
 setmetatable(Lockdown.settings, {__index = Lockdown.defaults})
