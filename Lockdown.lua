@@ -695,16 +695,18 @@ end
 
 -- Discover simple unlocking frames
 function Lockdown:TimerHandler_FrameCrawl()
-	for _,strata in ipairs(Apollo.GetStrata()) do
-		for _,wnd in ipairs(Apollo.GetWindowsInStratum(strata)) do
-			if wnd:IsStyleOn("Escapable") and not wnd:IsStyleOn("CloseOnExternalClick") then
-				Lockdown:RegisterWindow(wnd)
+	local tStrata = Apollo.GetStrata()
+	for i=1,#tStrata do
+		local tWindows = Apollo.GetWindowsInStratum(tStrata[i])
+		for i=1,#tWindows do
+			if tWindows[i]:IsStyleOn("Escapable") and not tWindows[i]:IsStyleOn("CloseOnExternalClick") then
+				Lockdown:RegisterWindow(tWindows[i])
 			end
 		end
 	end
 	-- Existing frames that aren't found above
-	for _,sName in ipairs(tAdditionalWindows) do
-		local wnd = Apollo.FindWindowByName(sName)
+	for i=1,#tAdditionalWindows do
+		local wnd = Apollo.FindWindowByName(tAdditionalWindows[i])
 		if wnd then
 			Lockdown:RegisterWindow(wnd)
 		end
