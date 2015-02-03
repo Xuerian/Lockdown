@@ -595,9 +595,9 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 			for i=1,#tRewards do
 				local t = tRewards[i]
 				-- Quest items we need and haven't interacted with
-				if (t.strType == "Quest" and t.nCompleted and t.nCompleted < t.nNeeded and (not tAct or not tAct.Interact or tAct.Interact.bCanInteract)) -- or #tAct == 0
+				if (t.eType == Unit.CodeEnumRewardInfoType.Quest and t.nCompleted and t.nCompleted < t.nNeeded and (not tAct or not tAct.Interact or tAct.Interact.bCanInteract)) -- or #tAct == 0
 					-- or scientist scans
-					 or (t.strType == "Scientist" and is_scientist) then
+					 or (t.eType == Unit.CodeEnumRewardInfoType.Scientist and is_scientist) then
 					onscreen[unit:GetId()] = unit
 					return
 				end
