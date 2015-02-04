@@ -661,8 +661,10 @@ function Lockdown:TimerHandler_HAL()
 	-- TODO: Re-add delayed targeting
 	if uBest and uCurrentTarget ~= uBest then
 		uCurrentTarget, uLastAutoTarget = uBest, uBest
-		GameLib.SetTargetUnit(uBest)
 		nLastTargetTime = os.clock()
+		if self.settings.auto_target then
+			GameLib.SetTargetUnit(uBest)
+		end
 	end
 end
 
