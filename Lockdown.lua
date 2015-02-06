@@ -33,6 +33,7 @@ local tAdditionalWindows = {
 	"GuildDesignerForm",
 	"SupplySachelForm",
 	"ViragsSocialMainForm",
+	"AbilitiesBuilderForm",
 }
 
 -- Add windows to ignore here
@@ -392,7 +393,6 @@ function Lockdown:OnLoad()
 
 	-- These windows are created or re-created and must be caught with event handlers
 	-- Abilities builder
-	self:AddWindowEventListener("AbilityWindowHasBeenToggled", "AbilitiesBuilderForm")
 	-- Social panel
 	self:AddWindowEventListener("GenericEvent_InitializeFriends", "SocialPanelForm")
 	-- Lore window
