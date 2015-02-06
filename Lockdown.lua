@@ -3,6 +3,13 @@
 
 -- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful. 
 
+-- Lockdown contains a significant amount of code providing a expanded targeting system around a user-positioned reticle, since we cannot reposition the mouseover location.
+-- It must account for a few complications with the API to do so:
+-- Units are not well classified as units the player should care about or should be able to target, by default
+-- All units may be targeted with GameLib.SetTargetUnit(unit), but invalid targets are immediately un-targeted. This is the process in that case:
+-- GameLib.SetTargetUnit(unit) called (It returns true or false based on if the player can target anything at the current time, not if the player can target [unit])
+--  "UnitCreated" and "TargetUnitChanged" are called during this call, and finish before it returns
+--  "TargetUnitChanged" is then called after it returns, inside the current frame.
 
 ----------------------------------------------------------
 -- Window lists
@@ -531,6 +538,7 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	self:RefreshUnit(unit)
 end
 
+local uCurrentTarget
 function Lockdown:EventHandler_UnitDestroyed(unit)
 	local id = unit:GetId()
 	if markers[id] then
@@ -550,7 +558,7 @@ end
 --  This function could possibly structured better
 --  However, this is the way that most made sense at the time
 function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
-	unit = unit or ctrl:GetData()
+	if not unit then unit = ctrl:GetData() end
 	-- Purge invalid or dead units
 	if not unit:IsValid() or unit:IsDead() then
 		self:EventHandler_UnitDestroyed(unit)
@@ -612,11 +620,10 @@ end
  -- If reticle center within range of unit center (reticle size vs estimated object size)
  -- If object meets criteria (Node range, ally health)
 local pReticle, nReticleRadius
-local nLastTargetTime, uDelayedTarget, uCurrentTarget, uLastAutoTarget, uLockedTarget = 0
+local uDelayedTarget, uLastAutoTarget, uLockedTarget
+local nLastTargetTick -- Used to mitigate untargetable units
 function Lockdown:TimerHandler_HAL()
 	if not player or uLockedTarget then return end
-	-- Prevent excessive flickering
-	if (os.clock() - nLastTargetTime) < 0.2 then return end
 	-- Grab local references to things we're going to use each iteration
 	local NewPoint, PointLength = Vector2.New, pReticle.Length
 	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
@@ -627,7 +634,7 @@ function Lockdown:TimerHandler_HAL()
 	-- Iterate over onscreen units
 	for id, unit in pairs(onscreen) do
 		local tPos = GetUnitScreenPosition(unit)
-		-- Destroy player markers we shouldn't be getting
+		-- Destroy markers we shouldn't be getting
 		if unit == player or IsDead(unit) then
 			self:EventHandler_UnitDestroyed(unit)
 		-- Verify that unit is still on screen
@@ -661,7 +668,7 @@ function Lockdown:TimerHandler_HAL()
 	-- TODO: Re-add delayed targeting
 	if uBest and uCurrentTarget ~= uBest then
 		uCurrentTarget, uLastAutoTarget = uBest, uBest
-		nLastTargetTime = os.clock()
+		nLastTargetTick = Apollo.GetTickCount()
 		if self.settings.auto_target then
 			GameLib.SetTargetUnit(uBest)
 		end
@@ -1183,6 +1190,10 @@ end
 
 function Lockdown:EventHandler_TargetUnitChanged()
 	if not GameLib.GetTargetUnit() then
+		-- Simple method to prevent target spamming on untargetable mobs
+		if uLastAutoTarget and (Apollo.GetTickCount() - nLastTargetTick) == 0 then
+			onscreen[uLastAutoTarget:GetId()] = nil
+		end
 		uCurrentTarget = nil
 	end
 	if uLockedTarget then
