@@ -388,6 +388,7 @@ function Lockdown:OnLoad()
 	-- Windows and their relevant events
 
 	Apollo.RegisterEventHandler("CombatMode_RegisterPausingWindow", "RegisterWindow", self)
+	Apollo.RegisterEventHandler("WindowManagementAdd", "EventHandler_WindowManagementAdd", self)
 
 	-- These windows are created or re-created and must be caught with event handlers
 	-- Abilities builder
@@ -700,6 +701,15 @@ function Lockdown:RegisterWindow(wnd, hot)
 		end
 	end
 	return false
+end
+
+-- WindowManagement
+function Lockdown:EventHandler_WindowManagementAdd(tData)
+	local wnd = tData.wnd
+	if not wnd then return end
+	if tAdditionalWindows[wnd:GetName()] or (wnd:IsStyleOn("Escapable") and not wnd:IsStyleOn("CloseOnExternalClick")) then
+		self:RegisterWindow(wnd)
+	end
 end
 
 -- Discover simple unlocking frames
