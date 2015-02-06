@@ -178,16 +178,16 @@ setmetatable(Lockdown.settings, {__index = Lockdown.defaults})
 
 
 ----------------------------------------------------------
--- TinyAsync, because WildStar
+-- Wait until a condition is met (Or simply wait for a delay) to call a given function
 
-local TinyAsync = { timers = {}, i = 0 }
-function TinyAsync:Wait(fCondition, fAction, nfDelay)
+local Alfred = { timers = {}, i = 0 }
+function Alfred:Wait(fCondition, fAction, nfDelay)
 	local i = self.i
 	local timer = ApolloTimer.Create(nfDelay or 0.1, true, "Timer_"..i, self)
 	self.timers[i] = timer
 	-- Apparently ApolloTimer doesn't like numerical function keys
 	self["Timer_"..i] = function()
-		if fCondition() then
+		if not fCondition or fCondition() then
 			timer:Stop()
 			fAction()
 			-- Release
@@ -208,7 +208,7 @@ local function print(...)
 	table.insert(print_buffer, {...})
 end
 
-TinyAsync:Wait(function() return ChatAddon and ChatAddon.tWindow end, function()
+Alfred:Wait(nil, function()
 	function print(...)
 		local out = {}
 		for i=1,select('#', ...) do
@@ -448,7 +448,7 @@ function Lockdown:OnLoad()
 		self.timerHAL = ApolloTimer.Create(self.settings.auto_target_interval/1000, true, "TimerHandler_HAL", self)
 		self.timerHAL:Stop()
 
-		TinyAsync:Wait(function()
+		Alfred:Wait(function()
 			player = GameLib.GetPlayerUnit()
 			return player and player:IsValid()
 		end,
