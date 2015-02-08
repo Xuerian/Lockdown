@@ -335,7 +335,7 @@ function Lockdown:OnRestore(eLevel, tData)
 	end
 end
 
-local preload_units, is_scientist, is_settler, player = {}
+local preload_units, is_scientist, is_settler = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
@@ -573,7 +573,7 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 	-- Visible units
 	elseif visible then
 		-- Basic relevance
-		if unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(player)] then
+		if unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(GameLib.GetPlayerUnit())] then
 			onscreen[unit:GetId()] = unit
 			return
 		end			
@@ -630,6 +630,7 @@ local pReticle, nReticleRadius
 local uDelayedTarget, uLastAutoTarget, uLockedTarget
 local nLastTargetTick -- Used to mitigate untargetable units
 function Lockdown:TimerHandler_HAL()
+	local player = GameLib.GetPlayerUnit()
 	if not player or uLockedTarget then return end
 	-- Grab local references to things we're going to use each iteration
 	local NewPoint, PointLength = Vector2.New, pReticle.Length
