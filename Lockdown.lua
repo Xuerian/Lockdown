@@ -440,41 +440,34 @@ function Lockdown:OnLoad()
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
 	self:KeyOrModifierUpdated()
+end
 
-
-	----------------------------------------------------------
-	-- Defer advanced targeting startup
-
-	if self.settings.auto_target then
-		self.timerHAL = ApolloTimer.Create(self.settings.auto_target_interval/1000, true, "TimerHandler_HAL", self)
-		self.timerHAL:Stop()
-
-		Alfred:Wait(function()
-			player = GameLib.GetPlayerUnit()
-			return player and player:IsValid()
-		end,
-		function()
-			-- Get player path
-			local nPath = PlayerPathLib.GetPlayerPathType()
-			is_scientist = nPath == 2
-			is_settler = nPath == 1
-			-- Update event registration
-			Apollo.RemoveEventHandler("UnitCreated", self)
-			Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
-			Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
-			Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
-			Apollo.RegisterEventHandler("UnitActivationTypeChanged", "RefreshUnit", self)
-			-- Process pre-load units
-			for i,v in ipairs(preload_units) do
-				self:EventHandler_UnitCreated(v)
-			end
-			preload_units = nil
-			self.HALReady = true
-			-- Initial locked timer
-			if GameLib.IsMouseLockOn() then
-				self:StartHAL()
-			end
-		end)
+-- HAL init runs when player unit is created
+function Lockdown:InitHAL()
+	-- Get player path
+	local nPath = PlayerPathLib.GetPlayerPathType()
+	is_scientist = nPath == 2
+	is_settler = nPath == 1
+	-- Update event registration
+	Apollo.RemoveEventHandler("UnitCreated", self)
+	Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
+	Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
+	Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
+	Apollo.RegisterEventHandler("UnitActivationTypeChanged", "RefreshUnit", self)
+	Apollo.RegisterEventHandler("ChangeWorld", "EventHandler_WorldChange", self)
+	-- Process pre-load units
+	for i,v in ipairs(preload_units) do
+		self:EventHandler_UnitCreated(v)
+	end
+	preload_units = nil
+	-- Create timer
+	self.timerHAL = ApolloTimer.Create(self.settings.auto_target_interval/1000, true, "TimerHandler_HAL", self)
+	self.HALReady = true
+	-- Initial locked timer
+	if GameLib.IsMouseLockOn() or self.settings.auto_target then
+		self:StartHAL()
+	else
+		self:StopHAL()
 	end
 end
 
@@ -494,6 +487,9 @@ end
 -- Units and Advanced Targeting
 
 function Lockdown:PreloadHandler_UnitCreated(unit)
+	if unit:IsThePlayer() then
+		return self:InitHAL()
+	end
 	table.insert(preload_units, unit)
 end
 
