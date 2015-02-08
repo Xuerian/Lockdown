@@ -551,6 +551,16 @@ function Lockdown:EventHandler_UnitDestroyed(unit)
 	end
 end
 
+function Lockdown:EventHandler_WorldChange()
+	for uid in pairs(onscreen) do
+		onscreen[uid] = nil
+	end
+	for uid in pairs(markers) do
+		markers[uid]:Destroy()
+		markers[uid] = nil
+	end
+end
+
 -- Check a marker (Unit) that just entered or left the screen
 --  This function could possibly structured better
 --  However, this is the way that most made sense at the time
