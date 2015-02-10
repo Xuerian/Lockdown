@@ -214,7 +214,8 @@ Alfred:Wait(nil, function()
 	function print(...)
 		local out = {}
 		for i=1,select('#', ...) do
-			table.insert(out, tostring(select(i, ...)))
+			local v = select(i, ...)
+			table.insert(out,  v == nil and "[nil]" or tostring(v))
 		end
 		Print(table.concat(out, " "))
 	end
