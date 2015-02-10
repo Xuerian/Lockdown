@@ -442,10 +442,18 @@ function Lockdown:OnLoad()
 	-- Rainbows, unicorns, and kittens
 	-- Oh my
 	self:KeyOrModifierUpdated()
+
+	-- Apparently initial game load and UnitCreated aren't too reliable..
+	if not self.HALReady then
+		Alfred:Wait(GameLib.GetPlayerUnit, self.InitHAL)
+	end
 end
 
 -- HAL init runs when player unit is created
 function Lockdown:InitHAL()
+	local self = self or Lockdown -- Support normal calling
+	if self.HALReady then return end -- Only init once
+	self.HALReady = true
 	-- Get player path
 	local nPath = PlayerPathLib.GetPlayerPathType()
 	is_scientist = nPath == 2
@@ -465,7 +473,6 @@ function Lockdown:InitHAL()
 	preload_units = nil
 	-- Create timer
 	self.timerHAL = ApolloTimer.Create(self.settings.auto_target_interval/1000, true, "TimerHandler_HAL", self)
-	self.HALReady = true
 	-- Initial locked timer
 	if GameLib.IsMouseLockOn() or self.settings.auto_target then
 		self:StartHAL()
