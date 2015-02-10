@@ -458,8 +458,9 @@ function Lockdown:InitHAL()
 	Apollo.RegisterEventHandler("UnitActivationTypeChanged", "RefreshUnit", self)
 	Apollo.RegisterEventHandler("ChangeWorld", "EventHandler_WorldChange", self)
 	-- Process pre-load units
-	for i,v in ipairs(preload_units) do
-		self:EventHandler_UnitCreated(v)
+	for i=1,#preload_units do
+		self:EventHandler_UnitCreated(preload_units[i])
+		preload_units[i] = nil
 	end
 	preload_units = nil
 	-- Create timer
