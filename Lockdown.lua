@@ -638,7 +638,7 @@ function Lockdown:TimerHandler_HAL()
 	-- Grab local references to things we're going to use each iteration
 	local NewPoint, PointLength = Vector2.New, pReticle.Length
 	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
-	local GetOverheadAnchor, GetType = player.GetOverheadAnchor, player.GetType
+	local GetOverheadAnchor = player.GetOverheadAnchor
 	local IsDead, IsOccluded = player.IsDead, player.IsOccluded
 	uCurrentTarget = GameLib.GetTargetUnit()
 	local nBest, uBest = 999
@@ -699,7 +699,7 @@ function Lockdown:RegisterWindow(wnd, hot)
 			-- Add to window index
 			if not tWindows[sName] then
 				tWindows[sName] = (tHotList[sName] or hot) and "hot" or "cold"
-				end
+			end
 
 			-- Add or update handle
 			if tWindows[sName] == "hot" then
