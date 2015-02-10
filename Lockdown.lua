@@ -126,7 +126,7 @@ local GameLib, Apollo = GameLib, Apollo
 -- Settings
 
 -- Defaults
-local Lockdown = {
+Lockdown = {
 	defaults = {
 		lock_on_load = true,
 		togglelock_key = 192, -- `
@@ -165,6 +165,7 @@ local Lockdown = {
 	settings = {},
 	reticles = {}
 }
+local Lockdown = Lockdown
 
 -- Since OnRestore can trigger late (or not trigger), preset these
 Lockdown.tTargetDispositions = {
