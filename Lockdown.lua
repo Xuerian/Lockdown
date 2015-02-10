@@ -224,7 +224,7 @@ Alfred:Wait(nil, function()
 		print(unpack(v))
 	end
 	print_buffer = nil
-end, 1)
+end, 3)
 
 local function system_print(...)
 	if ChatSystemLib then
