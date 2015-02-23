@@ -591,7 +591,8 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 		local tAct = unit:GetActivationState()
 		-- Ignore settler "Minfrastructure"
 		-- TODO: Options to include/filter these things
-		if tAct then
+		local bActState = tAct and #tAct ~= 0 or false
+		if bActState then
 			-- Hide already activated quest objects
 			if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
 				onscreen[unit:GetId()] = nil
@@ -620,7 +621,7 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 			for i=1,#tRewards do
 				local t = tRewards[i]
 				-- Quest items we need and haven't interacted with
-				if (t.eType == Unit.CodeEnumRewardInfoType.Quest and t.nCompleted and t.nCompleted < t.nNeeded and (not tAct or not tAct.Interact or tAct.Interact.bCanInteract)) -- or #tAct == 0
+				if (t.eType == Unit.CodeEnumRewardInfoType.Quest and t.nCompleted and t.nCompleted < t.nNeeded and (not bActState or not tAct.Interact or tAct.Interact.bCanInteract))
 					-- or scientist scans
 					 or (t.eType == Unit.CodeEnumRewardInfoType.Scientist and is_scientist) then
 					onscreen[unit:GetId()] = unit
