@@ -337,7 +337,7 @@ function Lockdown:OnRestore(eLevel, tData)
 	end
 end
 
-local preload_units, is_scientist, is_settler = {}
+local preload_units, g_isScientist, g_isSettler = {}
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
@@ -456,8 +456,8 @@ function Lockdown:InitHAL()
 	self.HALReady = true
 	-- Get player path
 	local nPath = PlayerPathLib.GetPlayerPathType()
-	is_scientist = nPath == 2
-	is_settler = nPath == 1
+	g_isScientist = nPath == 2
+	g_isSettler = nPath == 1
 	-- Update event registration
 	Apollo.RemoveEventHandler("UnitCreated", self)
 	Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
@@ -602,7 +602,7 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 				return
 			end
 			-- Hide settler collection or improvements
-			if is_settler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
+			if g_isSettler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
 				onscreen[unit:GetId()] = nil
 				return
 			end
@@ -618,7 +618,7 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 				return
 			end
 			-- Scientist scans
-			if is_scientist then
+			if g_isScientist then
 				-- Datacubes
 				if (tAct.Datacube and tAct.Datacube.bIsActive)
 				-- Raw scannable items (information constructs)
@@ -636,7 +636,7 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 				-- Quest items we need and haven't interacted with
 				if (t.nCompleted and t.nCompleted < t.nNeeded and (not bActState or not tAct.Interact or tAct.Interact.bCanInteract))
 					-- or scientist scans
-					 or (t.eType == eRewardScientist and is_scientist) then
+					 or (t.eType == eRewardScientist and g_isScientist) then
 					onscreen[unit:GetId()] = unit
 					return
 				end
@@ -646,6 +646,118 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 	-- Invisible or otherwise undesirable units
 	onscreen[unit:GetId()] = nil
 end
+
+--[[local function log(label, ...)
+	-- Event_FireGenericEvent("SendVarToRover", label, {...}, 0)
+end
+
+function Lockdown:DummyWLOS(wnd, ctrl, visible, unit)
+	if not unit then unit = ctrl:GetData() end
+	-- Purge invalid or dead units
+	if not unit:IsValid() or unit:IsDead() then
+		log("OnScreen ---", "Invalid or dead", unit:GetName(), unit)
+		return false
+	-- Visible units
+	elseif visible then
+		-- Basic relevance
+		if unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(GameLib.GetPlayerUnit())] then
+			log("OnScreen ++ "..unit:GetName().."  ShouldShowNamePlate and tTargetDispositions", unit)
+			return true
+		end			
+		-- Units we want based on activation state
+		local tAct = unit:GetActivationState()
+		-- Ignore settler "Minfrastructure"
+		-- TODO: Options to include/filter these things
+		if tAct then
+			-- Hide already activated quest objects
+			if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
+				log("OnScreen --- "..unit:GetName().."  Quest Target", unit)
+				return false
+			end
+			-- Hide settler collection or improvements
+			if g_isSettler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
+				log("OnScreen --- "..unit:GetName().."  Settler stuff", unit)
+				return false
+			end
+			-- Generic activateable objects
+			local t = tAct.Interact
+			if t and (t.bCanInteract or t.bIsHighlightable or t.bShowCallout) then
+				log("OnScreen ++ "..unit:GetName().."  Generic activateable", unit)
+				return true
+			end
+			-- Quest turn-ins
+			if tAct.QuestReward and tAct.QuestReward.bIsActive and tAct.QuestReward.bCanInteract then
+				log("OnScreen ++ "..unit:GetName().."  Quest Turn in", unit)
+				return true
+			end
+		end
+		-- Units we want based on quest or path status
+		local tRewards = unit:GetRewardInfo()
+		if tRewards then
+			for i=1,#tRewards do
+				local t = tRewards[i]
+				-- Quest items we need and haven't interacted with
+				if (t.eType == Unit.CodeEnumRewardInfoType.Quest and t.nCompleted and t.nCompleted < t.nNeeded and (not tAct or not tAct.Interact or tAct.Interact.bCanInteract)) -- or #tAct == 0
+					-- or scientist scans
+					 or (t.eType == Unit.CodeEnumRewardInfoType.Scientist and g_isScientist) then
+					 log("OnScreen ++ "..unit:GetName().."  Quest Item", unit)
+					return true
+				end
+			end
+		end
+	end
+	-- Invisible or otherwise undesirable units
+	log("OnScreen --- "..unit:GetName().."  Invisible or undesirable", unit)
+	return false
+end
+
+
+local function count(t)
+	local n = 0
+	for k,v in pairs(t) do
+		n = n + 1
+	end
+	return n
+end
+function Lockdown:LockdownTest()
+	local target = GameLib.GetTargetUnit()
+	local tid = target and target:GetId() or nil
+	local t = {
+		num_onscreen = count(onscreen), -- Number of onscreen markers
+		num_markers = count(markers), -- Total number of markers
+		list_onscreen = {}, -- Onscreen markers
+		list_offscreen = {}, -- Offscreen markers
+	}
+	for uid,unit in pairs(onscreen) do
+		table.insert(t.list_onscreen, unit:GetName())
+	end
+	for uid,marker in pairs(markers) do
+		if not onscreen[uid] then
+			table.insert(t.list_offscreen, marker:GetUnit():GetName())
+		end
+	end
+	if tid then
+		self:DummyWLOS(nil, nil, true, target)
+		t.osdata = osdata[tid]
+		t.target = target
+		t.screen = GameLib.GetUnitScreenPosition(target)
+		t.marker = markers[tid]
+		t.onscreen = onscreen[tid]
+		t.is_marker_unit = t.marker:GetUnit() == target
+	end
+	SendVarToRover("Lockdown Debug Table", t)
+end]]
+
+--[[local fn = Lockdown.EventHandler_WorldLocationOnScreen
+function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
+	if not unit then unit = ctrl:GetData() end
+	local id = unit:GetId()
+	local initial = onscreen[id]
+	fn(self, wnd, ctrl, visible, unit)
+	if initial ~= onscreen[id] then
+		print("WorldLocationOnScreen", onscreen[id] and "||||" or "----", unit:GetName())
+	end
+end]]
 
 -- Scan lists of markers in order of priority based on current state
  -- If reticle center within range of unit center (reticle size vs estimated object size)
