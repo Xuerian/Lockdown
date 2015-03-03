@@ -616,6 +616,16 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 				onscreen[unit:GetId()] = unit
 				return
 			end
+			-- Scientist scans
+			if is_scientist then
+				-- Datacubes
+				if (tAct.Datacube and tAct.Datacube.bIsActive)
+				-- Raw scannable items (information constructs)
+					or (tAct.ScientistRawScannable and tAct.ScientistRawScannable.bIsActive) then
+					onscreen[unit:GetId()] = unit
+					return
+				end
+			end
 		end
 		-- Units we want based on quest or path status
 		local tRewards = unit:GetRewardInfo()
