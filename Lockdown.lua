@@ -577,7 +577,7 @@ end
 --  This function could possibly structured better
 --  However, this is the way that most made sense at the time
 function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
-	if not unit then unit = ctrl:GetData() end
+	if not unit then unit = ctrl:GetUnit() end
 	-- Purge invalid or dead units
 	if not unit:IsValid() or unit:IsDead() then
 		self:EventHandler_UnitDestroyed(unit)
