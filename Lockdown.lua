@@ -1002,7 +1002,7 @@ function Lockdown:UpdateConfigUI()
 				if found then
 					-- Confirm existing setting
 					local setting = setting_suffix and format("%s_%s", found, setting_suffix) or found
-					if self.settings[setting] ~= nil then
+					if self.defaults[setting] ~= nil then
 						-- Map
 						element_map[name] = setting
 						-- Add event handlers
