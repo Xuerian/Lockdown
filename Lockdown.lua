@@ -505,6 +505,8 @@ end
 
 local markers = {}
 local onscreen = {}
+Lockdown.markers = markers
+Lockdown.onscreen = onscreen
 
 function Lockdown:RefreshUnit(unit)
 	-- Catch newly activateable units
