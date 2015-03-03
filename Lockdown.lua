@@ -593,7 +593,7 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 		local tAct = unit:GetActivationState()
 		-- Ignore settler "Minfrastructure"
 		-- TODO: Options to include/filter these things
-		local bActState = tAct and #tAct ~= 0 or false
+		local bActState = tAct and next(tAct) or false
 		if bActState then
 			-- Hide already activated quest objects
 			if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
