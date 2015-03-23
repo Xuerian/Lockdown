@@ -547,13 +547,13 @@ function Lockdown:EventHandler_UnitCreated(unit)
 	self:RefreshUnit(unit)
 end
 
-local uCurrentTarget
+local uCurrentTarget, uLastAutoTarget
 function Lockdown:EventHandler_UnitDestroyed(unit)
 	local id = unit:GetId()
 	if markers[id] then
 		markers[id]:Destroy()
 		markers[id] = nil
-		if GameLib.IsMouseLockOn() and unit == GameLib.GetTargetUnit() then
+		if unit == uLastAutoTarget and GameLib.IsMouseLockOn() and unit == GameLib.GetTargetUnit() then
 			uCurrentTarget = nil
 			GameLib.SetTargetUnit()
 		end
@@ -763,7 +763,7 @@ end]]
  -- If reticle center within range of unit center (reticle size vs estimated object size)
  -- If object meets criteria (Node range, ally health)
 local pReticle, nReticleRadius
-local uDelayedTarget, uLastAutoTarget, uLockedTarget
+local uDelayedTarget, uLockedTarget
 local nLastTargetTick -- Used to mitigate untargetable units
 function Lockdown:TimerHandler_HAL()
 	local player = GameLib.GetPlayerUnit()
@@ -1186,7 +1186,7 @@ function Lockdown:UpdateConfigUI()
 	end
 	-- Update key modifier buttons
 	for name, setting in pairs(tBindModMap) do
-		w[name]:SetText(s[setting] and s[setting] or L.button_label_mod)
+		w[name]:SetText(s[setting] or L.button_label_mod)
 	end
 	-- Update sliders
 	for name, setting in pairs(tSliderMap) do
