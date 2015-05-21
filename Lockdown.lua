@@ -634,7 +634,8 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 			for i=1,#tRewards do
 				local t = tRewards[i] --t.eType == eRewardQuest and 
 				-- Quest items we need and haven't interacted with
-				if (t.nCompleted and t.nCompleted < t.nNeeded and (not bActState or not tAct.Interact or tAct.Interact.bCanInteract))
+				if (t.peoObjective and t.peoObjective:GetStatus() == 1)
+					or (t.nCompleted and t.nCompleted < t.nNeeded and (not bActState or not tAct.Interact or tAct.Interact.bCanInteract))
 					-- or scientist scans
 					 or (t.eType == eRewardScientist and g_isScientist) then
 					onscreen[unit:GetId()] = unit
