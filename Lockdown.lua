@@ -86,11 +86,6 @@ local tLocalization = {
 		togglelock = "Toggle Lockdown",
 		locktarget = "Lock/Unlock current target",
 		manualtarget = "Manual target",
-		Widget_free_with = "Free cursor while holding..",
-		free_also_toggles = "Free cursor acts as toggle (Unfinished)",
-		lock_on_load = "Lock on startup",
-		ahk_cursor_center = "Center cursor on lock",
-		ahk_update_interval = "AHK update interval [ms]",
 		auto_target = "Reticle targeting",
 		reticle_show = "Show reticle",
 		auto_target_delay = "Reticle target delay",
@@ -128,9 +123,6 @@ local GameLib, Apollo = GameLib, Apollo
 -- Defaults
 Lockdown = {
 	defaults = {
-		lock_on_load = true,
-		togglelock_key = 192, -- `
-		togglelock_mod = false,
 		locktarget_key = 20, -- Caps Lock
 		locktarget_mod = false,
 		manualtarget_key = 84, -- T
@@ -155,12 +147,6 @@ Lockdown = {
 		reticle_hue_red = 1,
 		reticle_hue_blue = 1,
 		reticle_hue_green = 1,
-
-		ahk_lmb_key = 189, -- -
-		ahk_rmb_key = 187, -- =
-		ahk_mmb_key = "",
-		ahk_cursor_center = true,
-		ahk_update_interval = 100,
 	},
 	settings = {},
 	reticles = {}
@@ -264,31 +250,7 @@ function Lockdown:Init()
 end
 
 
-----------------------------------------------------------
--- Easy event handlers
 
--- Register a window update for a given event
-function Lockdown:AddWindowEventListener(sEvent, sName)
-	local sHandler = "AutoEventHandler_"..sEvent
-	Apollo.RegisterEventHandler(sEvent, sHandler, self)
-	self[sHandler] = function(self_)
-		local wnd = Apollo.FindWindowByName(sName)
-		if wnd then
-			self_:RegisterWindow(wnd)
-		end
-	end
-end
-
--- Register a delayed window update for a given event
-local tDelayedWindows = {}
-function Lockdown:AddDelayedWindowEventListener(sEvent, sName)
-	local sHandler = "AutoEventHandler_"..sEvent
-	Apollo.RegisterEventHandler(sEvent, sHandler, self)
-	self[sHandler] = function(self_)
-		tDelayedWindows[sName] = true
-		Lockdown.timerDelayedFrameCatch:Start()
-	end
-end
 
 
 ----------------------------------------------------------
@@ -297,9 +259,6 @@ end
 function Lockdown:OnSave(eLevel)
 	if eLevel == GameLib.CodeEnumAddonSaveLevel.General then
 		local s = self.settings
-		s.ahk_lmb = SystemKeyMap[s.ahk_lmb_key] or ""
-		s.ahk_rmb = SystemKeyMap[s.ahk_rmb_key] or ""
-		s.ahk_mmb = SystemKeyMap[s.ahk_mmb_key] or ""
 		-- Don't save defaults
 		for k,v in pairs(s) do
 			if v == self.defaults[k] then
@@ -368,70 +327,6 @@ function Lockdown:OnLoad()
 	self.timerRelock:Stop()
 	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
 	self.timerDelayedTarget:Stop()
-
-
-	----------------------------------------------------------
-	-- Automatic [un]locking
-
-	-- Crawl for frames to hook
-	self.timerFrameCrawl = ApolloTimer.Create(5.0, false, "TimerHandler_FrameCrawl", self)
-
-	-- Wait for windows to be created or re-created
-	self.timerDelayedFrameCatch = ApolloTimer.Create(0.1, false, "TimerHandler_DelayedFrameCatch", self)
-	self.timerDelayedFrameCatch:Stop()
-
-	-- Poll frames for visibility.
-	-- I'd much rather use hooks or callbacks or events, but I can't hook, I can't find the right callbacks/they don't work, and the events aren't consistant or listed. 
-	-- You made me do this, Carbine.
-	self.timerColdPulse = ApolloTimer.Create(0.5, true, "TimerHandler_ColdPulse", self)
-	self.timerHotPulse = ApolloTimer.Create(0.2, true, "TimerHandler_HotPulse", self)
-
-
-	----------------------------------------------------------
-	-- Windows and their relevant events
-
-	Apollo.RegisterEventHandler("CombatMode_RegisterPausingWindow", "RegisterWindow", self)
-	Apollo.RegisterEventHandler("WindowManagementAdd", "EventHandler_WindowManagementAdd", self)
-
-	-- These windows are created or re-created and must be caught with event handlers
-	-- Abilities builder
-	-- Social panel
-	self:AddWindowEventListener("GenericEvent_InitializeFriends", "SocialPanelForm")
-	-- Lore window
-	self:AddWindowEventListener("HudAlert_ToggleLoreWindow", "LoreWindowForm")
-	self:AddWindowEventListener("InterfaceMenu_ToggleLoreWindow", "LoreWindowForm")
-	-- Guild windows
-	self:AddDelayedWindowEventListener("GuildBankerOpen", "GuildBankForm")
-	self:AddDelayedWindowEventListener("Guild_ToggleInfo", "GuildInfoForm")
-	self:AddDelayedWindowEventListener("Guild_TogglePerks", "GuildPerksForm")
-	self:AddDelayedWindowEventListener("Guild_ToggleRoster", "GuildRosterForm")
-	-- Crafting grid
-	self:AddDelayedWindowEventListener("GenericEvent_StartCraftingGrid", "CraftingGridForm")
-	-- Runecrafting
-	self:AddDelayedWindowEventListener("GenericEvent_CraftingResume_OpenEngraving", "RunecraftingForm")
-	-- Tradeskill trainer
-	self:AddDelayedWindowEventListener("InvokeTradeskillTrainerWindow", "TradeskillTrainerForm")
-	-- Settler building
-	self:AddDelayedWindowEventListener("InvokeSettlerBuild", "BuildMapForm")
-	-- Commodity marketplace
-	self:AddDelayedWindowEventListener("ToggleMarketplaceWindow", "MarketplaceCommodityForm")
-	-- Auctionhouse
-	self:AddDelayedWindowEventListener("ToggleAuctionWindow", "MarketplaceAuctionForm")
-	-- CREDD
-	self:AddDelayedWindowEventListener("ToggleCREDDExchangeWindow", "MarketplaceCREDDForm")
-	-- Instance settings
-	self:AddDelayedWindowEventListener("ShowInstanceGameModeDialog", "InstanceSettingsForm")
-	self:AddDelayedWindowEventListener("ShowInstanceRestrictedDialog", "InstanceSettingsRestrictedForm")
-	-- Public events
-	self:AddDelayedWindowEventListener("PublicEventInitiateVote", "PublicEventVoteForm")
-	self:AddDelayedWindowEventListener("PublicEventStart", "PublicEventStatsForm")
-	self:AddDelayedWindowEventListener("GenericEvent_OpenEventStatsZombie", "PublicEventStatsForm")
-	-- Match Tracker / PVP Score
-	self:AddDelayedWindowEventListener("Datachron_LoadPvPContent", "MatchTracker")
-	-- Bank
-	self:AddDelayedWindowEventListener("ShowBank", "BankViewerForm")
-	self:AddDelayedWindowEventListener("ToggleBank", "BankViewerForm")
-	
 
 	----------------------------------------------------------
 	-- Keybinds
@@ -653,69 +548,6 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 	onscreen[unit:GetId()] = nil
 end
 
---[[local function log(label, ...)
-	-- Event_FireGenericEvent("SendVarToRover", label, {...}, 0)
-end
-
-function Lockdown:DummyWLOS(wnd, ctrl, visible, unit)
-	if not unit then unit = ctrl:GetData() end
-	-- Purge invalid or dead units
-	if not unit:IsValid() or unit:IsDead() then
-		log("OnScreen ---", "Invalid or dead", unit:GetName(), unit)
-		return false
-	-- Visible units
-	elseif visible then
-		-- Basic relevance
-		if unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(GameLib.GetPlayerUnit())] then
-			log("OnScreen ++ "..unit:GetName().."  ShouldShowNamePlate and tTargetDispositions", unit)
-			return true
-		end			
-		-- Units we want based on activation state
-		local tAct = unit:GetActivationState()
-		-- Ignore settler "Minfrastructure"
-		-- TODO: Options to include/filter these things
-		if tAct then
-			-- Hide already activated quest objects
-			if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
-				log("OnScreen --- "..unit:GetName().."  Quest Target", unit)
-				return false
-			end
-			-- Hide settler collection or improvements
-			if g_isSettler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
-				log("OnScreen --- "..unit:GetName().."  Settler stuff", unit)
-				return false
-			end
-			-- Generic activateable objects
-			local t = tAct.Interact
-			if t and (t.bCanInteract or t.bIsHighlightable or t.bShowCallout) then
-				log("OnScreen ++ "..unit:GetName().."  Generic activateable", unit)
-				return true
-			end
-			-- Quest turn-ins
-			if tAct.QuestReward and tAct.QuestReward.bIsActive and tAct.QuestReward.bCanInteract then
-				log("OnScreen ++ "..unit:GetName().."  Quest Turn in", unit)
-				return true
-			end
-		end
-		-- Units we want based on quest or path status
-		local tRewards = unit:GetRewardInfo()
-		if tRewards then
-			for i=1,#tRewards do
-				local t = tRewards[i]
-				-- Quest items we need and haven't interacted with
-				if (t.eType == Unit.CodeEnumRewardInfoType.Quest and t.nCompleted and t.nCompleted < t.nNeeded and (not tAct or not tAct.Interact or tAct.Interact.bCanInteract)) -- or #tAct == 0
-					-- or scientist scans
-					 or (t.eType == Unit.CodeEnumRewardInfoType.Scientist and g_isScientist) then
-					 log("OnScreen ++ "..unit:GetName().."  Quest Item", unit)
-					return true
-				end
-			end
-		end
-	end
-	-- Invisible or otherwise undesirable units
-	log("OnScreen --- "..unit:GetName().."  Invisible or undesirable", unit)
-	return false
-end
 
 
 local function count(t)
@@ -743,7 +575,6 @@ function Lockdown:LockdownTest()
 		end
 	end
 	if tid then
-		self:DummyWLOS(nil, nil, true, target)
 		t.osdata = osdata[tid]
 		t.target = target
 		t.screen = GameLib.GetUnitScreenPosition(target)
@@ -752,7 +583,7 @@ function Lockdown:LockdownTest()
 		t.is_marker_unit = t.marker:GetUnit() == target
 	end
 	SendVarToRover("Lockdown Debug Table", t)
-end]]
+end
 
 --[[local fn = Lockdown.EventHandler_WorldLocationOnScreen
 function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
@@ -823,137 +654,6 @@ function Lockdown:TimerHandler_HAL()
 			GameLib.SetTargetUnit(uBest)
 		end
 	end
-end
-
-
-----------------------------------------------------------
--- Frame discovery, handling, and polling
-
--- Disover frames we should pause for
-local tColdWindows, tHotWindows, tWindows = {}, {}, {}
-function Lockdown:RegisterWindow(wnd, hot)
-	if wnd then
-		local sName = wnd:GetName()
-		if not tIgnoreWindows[sName] then
-			-- Add to window index
-			if not tWindows[sName] then
-				tWindows[sName] = (tHotList[sName] or hot) and "hot" or "cold"
-			end
-
-			-- Add or update handle
-			if tWindows[sName] == "hot" then
-				tHotWindows[sName] = wnd
-			else
-				tColdWindows[sName] = wnd
-			end
-			return true
-		end
-	end
-	return false
-end
-
--- WindowManagement
-function Lockdown:EventHandler_WindowManagementAdd(tData)
-	local wnd = tData.wnd
-	if not wnd then return end
-	if tAdditionalWindows[wnd:GetName()] or (wnd:IsStyleOn("Escapable") and not wnd:IsStyleOn("CloseOnExternalClick")) then
-		self:RegisterWindow(wnd)
-	end
-end
-
--- Discover simple unlocking frames
-function Lockdown:TimerHandler_FrameCrawl()
-	local tStrata = Apollo.GetStrata()
-	for i=1,#tStrata do
-		local tWindows = Apollo.GetWindowsInStratum(tStrata[i])
-		for i=1,#tWindows do
-			if tWindows[i]:IsStyleOn("Escapable") and not tWindows[i]:IsStyleOn("CloseOnExternalClick") then
-				Lockdown:RegisterWindow(tWindows[i])
-			end
-		end
-	end
-	-- Existing frames that aren't found above
-	for i=1,#tAdditionalWindows do
-		local wnd = Apollo.FindWindowByName(tAdditionalWindows[i])
-		if wnd then
-			Lockdown:RegisterWindow(wnd)
-		end
-	end
-end
-
--- Wait for certain frames to be created or recreated after a event
-function Lockdown:TimerHandler_DelayedFrameCatch()
-	for sName in pairs(tDelayedWindows) do
-		local wnd = Apollo.FindWindowByName(sName)
-		if wnd then
-			self:RegisterWindow(wnd)
-			tDelayedWindows[sName] = nil
-		end
-	end
-end
-
--- Poll unlocking frames
-local free_key_held = false -- User toggling mouse with a modifier key
-local tSkipWindows = {}
-local bColdSuspend, bHotSuspend = false, false
-
-function Lockdown:PulseCore(t, other_suspend, csi)
-	local bWindowUnlock = false
-	if not free_key_held then
-		local tSkipWindows = tSkipWindows
-		-- Poll windows
-		for _, wnd in pairs(t) do
-			-- Unlock if visible and not currently skipped
-			if wnd:IsShown() and wnd:IsValid() then
-				if not tSkipWindows[wnd] then
-					bWindowUnlock = true
-				end
-			-- Expire hidden from skiplist
-			elseif tSkipWindows[wnd] then
-				tSkipWindows[wnd] = nil
-			end
-		end
-
-		-- CSI(?) dialogs
-		-- TODO: Skip inconsequential CSI dialogs (QTEs)
-		if csi then
-			if CSIsLib.GetActiveCSI() then
-				if not tSkipWindows.CSI then
-					bWindowUnlock = true
-				end
-			else
-				tSkipWindows.CSI = false
-			end
-		end
-
-		-- Update lock
-		local lock = GameLib.IsMouseLockOn()
-		if not (bWindowUnlock or other_suspend or lock) and bActiveIntent then
-			self:SetActionMode(true)
-		elseif (bWindowUnlock or other_suspend) and lock then
-			self:SuspendActionMode()
-		end
-	end
-
-	return bWindowUnlock
-end
-
-function Lockdown:TimerHandler_ColdPulse()
-	bColdSuspend = self:PulseCore(tColdWindows, bHotSuspend, true)
-end
-
-function Lockdown:TimerHandler_HotPulse()
-	bHotSuspend = self:PulseCore(tHotWindows, bColdSuspend)
-end
-
-function Lockdown:PollAllWindows()
-	self:TimerHandler_HotPulse()
-	self:TimerHandler_ColdPulse()
-	return bColdSuspend or bHotSuspend
-end
-
-function Lockdown:TimerHandler_Relock()
-	self:SetActionMode(true)
 end
 
 
@@ -1208,7 +908,7 @@ end
 -- Keybind handling
 
 -- Store key and modifier check function
-local togglelock_key, togglelock_mod, locktarget_key, locktarget_mod, manualtarget_key, manualtarget_mod
+local locktarget_key, locktarget_mod, manualtarget_key, manualtarget_mod
 local function Upvalues(whichkey, whichmod)
 	local mod = Lockdown.settings[whichmod]
 	if mod == "shift" then
@@ -1222,7 +922,6 @@ local function Upvalues(whichkey, whichmod)
 end
 
 function Lockdown:KeyOrModifierUpdated()
-	togglelock_key, togglelock_mod = Upvalues("togglelock_key", "togglelock_mod")
 	locktarget_key, locktarget_mod = Upvalues("locktarget_key", "locktarget_mod")
 	manualtarget_key, manualtarget_mod = Upvalues("manualtarget_key", "manualtarget_mod")
 	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
@@ -1255,45 +954,6 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 				self:SuspendActionMode()
 			end
 		end
-	
-	-- Use vkeys to avoid overlapping player input
-	elseif iKey == 0xF1 then
-		self:SetActionMode(true, true)
-	elseif iKey == 0xF2 and not free_key_held then
-		self:SetActionMode(false, true)
-
-	-- Manual target
-	elseif iKey == manualtarget_key and (not manualtarget_mod or manualtarget_mod()) then
-		if uCurrentTarget then
-			GameLib.SetTargetUnit(uCurrentTarget)
-		end
-
-	-- Toggle mode
-	elseif iKey == togglelock_key and (not togglelock_mod or togglelock_mod()) then
-		-- Save currently active windows and resume
-		if bActiveIntent and not GameLib.IsMouseLockOn() then
-			wipe(tSkipWindows)
-
-			for _,wnd in pairs(tColdWindows) do
-				if wnd:IsShown() then
-					tSkipWindows[wnd] = true
-				end
-			end
-			for _,wnd in pairs(tHotWindows) do
-				if wnd:IsShown() then
-					tSkipWindows[wnd] = true
-				end
-			end
-
-			if CSIsLib.GetActiveCSI() then
-				tSkipWindows.CSI = true
-			end
-			self:SetActionMode(true)
-		else
-			-- Toggle
-			self:SetActionMode(not bActiveIntent)
-		end
-	
 	-- Lock target
 	elseif iKey == locktarget_key and (not locktarget_mod or locktarget_mod()) then
 		if uLockedTarget then
