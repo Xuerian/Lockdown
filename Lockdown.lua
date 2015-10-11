@@ -617,6 +617,11 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 				onscreen[unit:GetId()] = unit
 				return
 			end
+			-- Quest starting objects
+			if tAct.QuestNew and tAct.QuestNew.bCanInteract then
+				onscreen[unit:GetId()] = Unit
+				return
+			end
 			-- Scientist scans
 			if g_isScientist then
 				-- Datacubes
