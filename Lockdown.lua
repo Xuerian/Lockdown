@@ -286,13 +286,6 @@ function Lockdown:OnRestore(eLevel, tData)
 		}
 		-- Update settings dependant events
 		self:KeyOrModifierUpdated()
-		self.timerDelayedTarget:Set(s.auto_target_delay / 1000, false)
-		-- Show settings window after reload
-		if tData._is_ahk_reload then
-			self:OnConfigure()
-		end
-		self:SetActionMode(s.lock_on_load)
-		-- SendVarToRover("Lockdown", self)
 	end
 end
 
@@ -332,10 +325,7 @@ function Lockdown:OnLoad()
 	-- Keybinds
 
 	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
-	self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
 
-	-- Rainbows, unicorns, and kittens
-	-- Oh my
 	self:KeyOrModifierUpdated()
 
 	-- Apparently initial game load and UnitCreated aren't too reliable..
@@ -969,38 +959,6 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	end
 end
 
--- Watch for modifiers to toggle mouselock
-function Lockdown:TimerHandler_FreeKeys()
-	local old = free_key_held
-	free_key_held = ((self.settings.free_with_shift and Apollo.IsShiftKeyDown())
-		or (self.settings.free_with_ctrl and Apollo.IsControlKeyDown())
-		or (self.settings.free_with_alt and Apollo.IsAltKeyDown()))
-
-	-- If status has changed
-	-- This now clashes with the entirely external MouselockRebind. It doesn't know if we need a relock or not and so doesn't really work with free_also_toggles
-	if old ~= free_key_held then
-		-- If we are now holding the key
-		if free_key_held then
-			-- If the mouse is already locked, suspend lock
-			if GameLib.IsMouseLockOn() then
-				self:SuspendActionMode()
-			-- If the mouse isn't locked but we want to toggle, force it
-			elseif self.settings.free_also_toggles then
-				self:ForceActionMode()
-			end
-		-- If we let go of the key and lock doesn't match intent
-		elseif GameLib.IsMouseLockOn() ~= bActiveIntent then
-			-- If we want to be locked and aren't paused otherwise
-			if bActiveIntent and not (self:PulseCore(tHotWindows) or self:PulseCore(tColdWindows, true)) then
-				self:SetActionMode(true)
-			-- If we were locked and don't intend to be locked, unlock
-			elseif not bActiveIntent then
-				self:SetActionMode(false)
-			end
-		end
-	end
-end
-
 function Lockdown:TimerHandler_DelayedTarget()
 	if uDelayedTarget then
 		GameLib.SetTargetUnit(uDelayedTarget)
@@ -1021,46 +979,6 @@ function Lockdown:EventHandler_TargetUnitChanged()
 	end
 end
 
-
-----------------------------------------------------------
--- Mode setters
-
--- Action mode toggle
-function Lockdown:SetActionMode(bState)
-	bActiveIntent = bState
-	if GameLib.IsMouseLockOn() ~= bState then
-		GameLib.SetMouseLock(bState)
-	end
-	if bState then
-		self:StartHAL()
-	else
-		self:StopHAL()
-		bHotSuspend = false
-		bColdSuspend = false
-	end
-	self.wndReticle:Show(bState and self.settings.reticle_show)
-	-- TODO: Sounds
-end
-
--- Force without enabling
-function Lockdown:ForceActionMode()
-	if not GameLib.IsMouseLockOn() then
-		GameLib.SetMouseLock(true)
-		self.wndReticle:Show(true)
-		self:StartHAL()
-	end
-	-- TODO: Indicate inactive-but-enabled status
-end
-
--- Suspend without disabling
-function Lockdown:SuspendActionMode()
-	if GameLib.IsMouseLockOn() then
-		GameLib.SetMouseLock(false)
-		self.wndReticle:Show(false)
-		self:StopHAL()
-	end
-	-- TODO: Indicate active-but-suspended status
-end
 
 
 ----------------------------------------------------------
