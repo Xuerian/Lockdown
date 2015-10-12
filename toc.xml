@@ -2,4 +2,5 @@
 <Addon Name="Lockdown" Version="1.0" Author="Xuerian" APIVersion="11" Description="Mouselock control and targeting improvements">
     <Script Name="Lockdown.lua"/>
     <Form Name="Lockdown.xml"/>
+    <Form Name="Lockdown_Marker.xml"/>
 </Addon>
