@@ -241,7 +241,7 @@ function Lockdown:OnLoad()
 
 	-- Add reticles
 	self:AddReticle("tiny", [[Lockdown\reticles\tiny.png]], 128)
-	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 128)
+	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 256)
 	self:Reticle_Update()
 	self.wndReticle:Show(GameLib.IsMouseLockOn())
 	self:RegisterEventHandler("ResolutionChanged", "Reticle_Update")
