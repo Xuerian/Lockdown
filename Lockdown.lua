@@ -597,6 +597,13 @@ end
 -- CAN'T TAKE THE CHANGE, MAN
 local ChangeHandlers = {}
 
+function Lockdown:ChangeSetting(setting, value)
+	self.settings[setting] = value
+	if ChangeHandlers[setting] then
+		ChangeHandlers[setting](value)
+	end
+end
+
 function ChangeHandlers.auto_target_delay(value)
 	Lockdown.timerDelayedTarget:Set(value, false)
 end
@@ -664,7 +671,7 @@ function Lockdown:OnBindMod(btn)
 	else
 		mod = false
 	end
-	self.settings[setting] = mod
+	self:ChangeSetting(setting, mod)
 	self:KeyOrModifierUpdated()
 	btn:SetText(mod and mod or L.button_label_mod)
 end
@@ -672,17 +679,14 @@ end
 -- Checkboxes
 local tCheckboxMap = {}
 function Lockdown:OnButtonCheck(btn)
-	self.settings[tCheckboxMap[btn:GetName()]] = btn:IsChecked()
+	self:ChangeSetting(tCheckboxMap[btn:GetName()], btn:IsChecked())
 end
 
 -- Sliders
 local tSliderMap = {}
 function Lockdown:OnSlider(slider)
 	local setting, value = tSliderMap[slider:GetName()], slider:GetValue()
-	self.settings[setting] = value
-	if ChangeHandlers[setting] then
-		ChangeHandlers[setting](value)
-	end
+	self:ChangeSetting(setting, value)
 	self:UpdateWidget_Slider(slider, setting)
 end
 
@@ -706,7 +710,7 @@ end
 function Lockdown:OnBtn_Unbind()
 	if self.bind_mode_active then
 		self.bind_mode_active = false
-		self.settings[sWhichBind] = ""
+		self:ChangeSetting(sWhichBind, "")
 		self:KeyOrModifierUpdated()
 		self:UpdateConfigUI()
 	end
@@ -870,7 +874,7 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	-- Listen for key to bind
 	if self.bind_mode_active and iKey ~= 0xF1 and iKey ~= 0xF2 then
 		self.bind_mode_active = false
-		self.settings[sWhichBind] = iKey
+		self:ChangeSetting(sWhichBind, iKey)
 		self:KeyOrModifierUpdated()
 		self:UpdateConfigUI()
 		return
