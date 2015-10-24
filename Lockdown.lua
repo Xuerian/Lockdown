@@ -6,6 +6,14 @@
 --  "UnitCreated" and "TargetUnitChanged" are called during this call, and finish before it returns
 --  "TargetUnitChanged" is then called after it returns, inside the current frame.
 
+local tUnitWhitelist = {
+	["Charge Target"] = true -- Challenge swing things
+}
+
+local tUnitBlacklist = {
+
+}
+
 ----------------------------------------------------------
 -- Localization
 
@@ -17,14 +25,18 @@ local tLocalization = {
 		button_label_mod = "No modifier",
 
 		Title_tweaks = "Tweaks",
-		Text_mouselockrebind = "Orange settings require included ahk script, read the Lockdown Curse page for details. Orange and yellow settings require a UI reload to take effect.",
+		Text_mouselockrebind = "Lockdown has been slimmed down quite a bit since Reloaded. Some options are missing or incomplete.",
 
 		togglelock = "Toggle Lockdown",
 		locktarget = "Lock/Unlock current target",
 		manualtarget = "Manual target",
 		auto_target = "Reticle targeting",
 		reticle_show = "Show reticle",
-		auto_target_delay = "Reticle target delay",
+		-- auto_target_delay = "Reticle target delay",
+		reticle_range_limit = "Maximum targeting range",
+		reticle_clear_distant_target = "Clear targets that move too far from the reticle",
+		reticle_clear_distant_range = "Clear target distance",
+		-- update_frame_rate = "Update every 4*n frames",
 		reticle_opacity = "Reticle opacity",
 		reticle_size = "Reticle size",
 		reticle_offset_y = "Vertical offset",
@@ -60,28 +72,34 @@ Lockdown = {
 	defaults = {
 		locktarget_key = 20, -- Caps Lock
 		locktarget_mod = false,
-		manualtarget_key = 84, -- T
-		manualtarget_mod = "control",
-		free_with_shift = false,
-		free_with_ctrl = false,
-		free_with_alt = true,
-		free_also_toggles = false,
 		reticle_show = true,
+		reticle_range_limit = 50,
+		reticle_clear_distant_target = true,
+		reticle_clear_distant_range = 150,
 		auto_target = true,
 		auto_target_neutral = false,
 		auto_target_hostile = true,
 		auto_target_friendly = false,
 		auto_target_settler = false,
-		auto_target_delay = 0,
-		auto_target_interval = 100,
-		reticle_opacity = 0.3,
-		reticle_size = 32,
+		auto_target_harvest = true,
+		reticle_opacity = 0.1,
+		reticle_size = 128,
 		reticle_sprite = "giznat",
 		reticle_offset_x = 0,
-		reticle_offset_y = 0,
+		reticle_offset_y = -70,
 		reticle_hue_red = 1,
 		reticle_hue_blue = 1,
 		reticle_hue_green = 1,
+
+		-- Deprecated
+		manualtarget_key = 72, -- H
+		manualtarget_mod = "control",
+		free_with_shift = false,
+		free_with_ctrl = false,
+		free_with_alt = true,
+		auto_target_delay = 0,
+		auto_target_interval = 100,
+		update_frame_rate = 4,
 	},
 	settings = {},
 	reticles = {}
@@ -187,12 +205,10 @@ end
 
 function Lockdown:Init()
 	Apollo.RegisterAddon(self, true, L.button_configure)
-	self:RegisterEventHandler("UnitCreated", "PreloadHandler_UnitCreated")
+	-- We have to register for this right away, since we get units before
+	-- the addon finishes loading, much less the player unit existing.
+	self:RegisterEventHandler("UnitCreated", "Handler_ProcessUnit")
 end
-
-
-
-
 
 ----------------------------------------------------------
 -- Saved data
@@ -231,257 +247,240 @@ function Lockdown:OnRestore(eLevel, tData)
 end
 
 local preload_units, g_isScientist, g_isSettler = {}
+local LOCK_STATE = false
+local PLAYER = nil
+local FRAME = 0
+local PAUSED = false
 function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Load reticle
 
-	self.xmlDoc = XmlDoc.CreateFromFile("Lockdown.xml")
-	self.wndReticle = Apollo.LoadForm(self.xmlDoc, "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
+	self.wndReticle = Apollo.LoadForm("Lockdown.xml", "Lockdown_ReticleForm", "InWorldHudStratum", nil, self)
 	self.wndReticleSpriteTarget = self.wndReticle:FindChild("Lockdown_ReticleSpriteTarget")
 
 	-- Add reticles
 	self:AddReticle("tiny", [[Lockdown\reticles\tiny.png]], 128)
 	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 256)
 	self:Reticle_Update()
-	self.wndReticle:Show(GameLib.IsMouseLockOn())
 	self:RegisterEventHandler("ResolutionChanged", "Reticle_Update")
 
+	----------------------------------------------------------------------
+	-- TICK TOCK TICK TOCK
+
+	self:RegisterEventHandler("VarChange_FrameCount")
 
 	----------------------------------------------------------
 	-- Options
 
 	Apollo.RegisterSlashCommand("lockdown", "OnConfigure", self)
-
+	Apollo.RegisterSlashCommand("ldt", "LockdownTest", self)
 
 	----------------------------------------------------------
 	-- Targeting
 
+	self.xmlMarker = XmlDoc.CreateFromFile("Lockdown_Marker.xml")
+	self:RegisterEventHandler("UnitActivationTypeChanged", "Handler_ProcessUnit")
+	self:RegisterEventHandler("UnitDestroyed")
+	self:RegisterEventHandler("ChangeWorld")
 	self:RegisterEventHandler("TargetUnitChanged")
-	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
-	self.timerRelock:Stop()
-	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
-	self.timerDelayedTarget:Stop()
+	self.timerEscResume = ApolloTimer.Create(1, false, "TimerHandler_EscResume", self)
+	self.timerEscResume:Stop()
 
 	----------------------------------------------------------
 	-- Keybinds
 
 	self:RegisterEventHandler("SystemKeyDown")
+	-- self.timerFreeKeys = ApolloTimer.Create(0.1, true, "TimerHandler_FreeKeys", self)
 
 	self:KeyOrModifierUpdated()
-
-	-- Apparently initial game load and UnitCreated aren't too reliable..
-	if not self.HALReady then
-		Alfred:Wait(GameLib.GetPlayerUnit, self.InitHAL)
-	end
-end
-
--- HAL init runs when player unit is created
-function Lockdown:InitHAL()
-	local self = self or Lockdown -- Support normal calling
-	if self.HALReady then return end -- Only init once
-	self.HALReady = true
-	-- Get player path
-	local nPath = PlayerPathLib.GetPlayerPathType()
-	g_isScientist = nPath == 2
-	g_isSettler = nPath == 1
-	-- Update event registration
-	Apollo.RemoveEventHandler("UnitCreated", self)
-	Apollo.RegisterEventHandler("UnitCreated", "EventHandler_UnitCreated", self)
-	Apollo.RegisterEventHandler("UnitDestroyed", "EventHandler_UnitDestroyed", self)
-	Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
-	Apollo.RegisterEventHandler("UnitActivationTypeChanged", "RefreshUnit", self)
-	Apollo.RegisterEventHandler("ChangeWorld", "EventHandler_WorldChange", self)
-	self:RegisterEventHandler("UnitDestroyed")
-	self:RegisterEventHandler("ChangeWorld")
-	-- Process pre-load units
-	for i=1,#preload_units do
-		self:EventHandler_UnitCreated(preload_units[i])
-		preload_units[i] = nil
-	end
-	preload_units = nil
-	-- Create timer
-	self.timerHAL = ApolloTimer.Create(self.settings.auto_target_interval/1000, true, "TimerHandler_HAL", self)
-	-- Initial locked timer
-	if GameLib.IsMouseLockOn() or self.settings.auto_target then
-		self:StartHAL()
-	else
-		self:StopHAL()
-	end
-end
-
-function Lockdown:StartHAL()
-	if self.HALReady then
-		self.timerHAL:Start()
-	end
-end
-
-function Lockdown:StopHAL()
-	if self.HALReady then
-		self.timerHAL:Stop()
-	end
 end
 
 ----------------------------------------------------------
 -- Units and Advanced Targeting
 
-function Lockdown:PreloadHandler_UnitCreated(unit)
-	if unit:IsThePlayer() then
-		return self:InitHAL()
+-- true if desired, false if not, nil if needs removed
+-- TODO: Better filtering of units we really don't care about to cut down on OnScreen calls
+local function IsDesiredUnit(unit)
+	if not unit:IsValid() or unit:IsThePlayer() then return nil end
+	local unitType = unit:GetType()
+	local player = GameLib.GetPlayerUnit()
+	-- PC Units are not removed on death and respawn without a unit creation event
+	if unitType == "Player" then
+		if unit:GetDispositionTo(player) == Unit.CodeEnumDisposition.Friendly then
+			-- TODO: Friendly player filtering
+		elseif player:IsPvpFlagged() and unit:IsPvpFlagged() then
+			return true
+		end
+		return false
 	end
-	table.insert(preload_units, unit)
+	-- Lists
+	local name = unit:GetName()
+	if tUnitBlacklist[name] then
+		return nil
+	elseif tUnitWhitelist[name] then
+		return true
+	
+	-- Harvest nodes
+	elseif unitType == "Harvest"
+	and unit:GetHarvestRequiredTradeskillName() ~= "Farmer"
+	and unit:CanBeHarvestedBy(player) then
+		return true
+	
+	-- Visible plates
+	elseif unit:ShouldShowNamePlate() and unit:GetDispositionTo(player) ~= Unit.CodeEnumDisposition.Friendly then
+		return true
+	end
+
+	-- Activation states
+	local tAct = unit:GetActivationState()
+	local bActState = tAct and next(tAct) or false
+	if bActState then
+		-- Hide already activated quest objects
+		if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
+			if unitType == "Simple" then return else return false end
+			-- return false
+		
+		-- Hide settler collection or improvements
+		-- elseif g_isSettler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
+		-- 	onscreen[unit:GetId()] = nil
+		-- 	return
+		
+		-- Generic activateable objects
+		elseif tAct.Interact and (tAct.Interact.bCanInteract or tAct.Interact.bIsHighlightable or tAct.Interact.bShowCallout) then
+			return true
+		
+		-- Quest turn-ins
+		elseif tAct.QuestReward and tAct.QuestReward.bIsActive and tAct.QuestReward.bCanInteract then
+			return true
+		
+		-- Quest starting objects
+		elseif tAct.QuestNew and tAct.QuestNew.bCanInteract then
+			return true
+		
+		-- Scientist scans
+		elseif g_isScientist then
+			-- Datacubes
+			if (tAct.Datacube and tAct.Datacube.bIsActive)
+			-- Raw scannable items (information constructs)
+			or (tAct.ScientistRawScannable and tAct.ScientistRawScannable.bIsActive) then
+				return true
+			end
+		end
+	end
+	-- Units we want based on quest or path status
+	local tRewards = unit:GetRewardInfo()
+	if tRewards then
+		for i=1,#tRewards do
+			local t = tRewards[i] --t.eType == eRewardQuest and 
+			-- Quest items we need and haven't interacted with
+			if (t.peoObjective and t.peoObjective:GetStatus() == 1)
+			or (t.nCompleted
+			 and t.nCompleted < t.nNeeded
+			 and (not bActState
+			  or not tAct.Interact
+			  or tAct.Interact.bCanInteract))
+			-- or scientist scans
+			or (g_isScientist and t.eType == Unit.CodeEnumRewardInfoType.Scientist) then
+				return true
+			end
+		end
+	end
+	-- Discard simple units until their activation state changes
+	if unitType == "Simple" then return else return false end
 end
 
-local markers = {}
-local onscreen = {}
-Lockdown.markers = markers
-Lockdown.onscreen = onscreen
+local markers = {} -- Frames anchored to units for onscreen event
+local onscreen = {} -- Currently onscreen units
+local inrange = {} -- Currently in range units
+local buffered = {} -- Units that were created while player was invalid
+local suspended = {} -- Units that are not currently, but may be targetable
+Lockdown.tTrackingData = {
+	markers = markers,
+	onscreen = onscreen,
+	inrange = inrange,
+	buffered = buffered,
+	suspended = suspended
+}
 
-function Lockdown:RefreshUnit(unit)
-	-- Catch newly activateable units
-	if not markers[unit:GetId()] then
-		self:EventHandler_UnitCreated(unit)
+local function DestroyMarker(uid)
+	if markers[uid] then
+		markers[uid]:Destroy()
+		markers[uid] = nil
+		onscreen[uid] = nil
+		inrange[uid] = nil
+		suspended[uid] = nil
 	end
-	-- Qualify unit
-	self:EventHandler_WorldLocationOnScreen(nil, nil, GameLib.GetUnitScreenPosition(unit).bOnScreen, unit)
 end
 
--- Store category of marker
-function Lockdown:EventHandler_UnitCreated(unit)
-	local id = unit:GetId()
-	-- Invalid or existing markers
-	if not id or markers[id] or not unit:IsValid() or unit:IsThePlayer() then return nil end
-	local utype = unit:GetType()
-	-- Filter units
-	--  Players (Except Player)
-	if utype == "Player" or utype == "NonPlayer" or unit:GetRewardInfo() or unit:GetActivationState()
-		-- NPCs that get plates
-		-- or ((utype == "NonPlayer" or utype == "Turret") and unit:ShouldShowNamePlate())
-		-- Harvestable nodes (Except farming)
-		or (utype == "Harvest" and unit:GetHarvestRequiredTradeskillName() ~= "Farmer" and unit:CanBeHarvestedBy(player))
-		then
-			-- Ok!
-	 -- Quest objective units, scannables
-	 -- These are filtered in WorldLocationOnScreen, since they can change.
-	-- elseif (utype == "Simple" or utype == "NonPlayer") and unit:GetRewardInfo() then
-		-- Ok!
-	else return end -- Not ok.
-	-- Activate marker
-	local marker = Apollo.LoadForm(self.xmlDoc, "Lockdown_Marker", "InWorldHudStratum", self)
-	marker:Show()
-	marker:SetData(unit)
-	marker:SetUnit(unit)
-	markers[id] = marker
 
-	self:RefreshUnit(unit)
+
+function Lockdown:Handler_ProcessUnit(unit, bOnScreen)
+	if not unit then return end
+	local uid = unit:GetId()
+	if not uid or not unit:IsValid() or unit:IsThePlayer() then return end
+	-- Player is invalid/invalidated at certain times, buffer those units
+	-- since we need to get their standing to the player
+	if not PLAYER then
+		table.insert(buffered, unit)
+		return
+	end
+	-- Evaluate
+	local desired = IsDesiredUnit(unit)
+	if desired ~= nil then
+		local marker = markers[uid]
+		-- New marker
+		if not markers[uid] then
+			markers[uid] = Apollo.LoadForm(self.xmlMarker, "Lockdown_Marker", "InWorldHudStratum", self)
+			markers[uid]:SetData(unit)
+			markers[uid]:SetUnit(unit)
+		end
+		-- Start tracking
+		if bOnScreen == nil then
+			bOnScreen = GameLib.GetUnitScreenPosition(unit).bOnScreen
+		end
+		if desired and bOnScreen then
+			if not onscreen[uid] then
+				onscreen[uid] = unit
+			end
+		-- Stop tracking
+		elseif onscreen[uid] then
+			onscreen[uid] = nil
+			inrange[uid] = nil
+		end
+	-- Destroy marker
+	else
+		DestroyMarker(uid)
+	end
 end
 
 local uCurrentTarget, uLastAutoTarget
+local plsNoOverflow = false
 function Lockdown:EventHandler_UnitDestroyed(unit)
-	local id = unit:GetId()
-	if markers[id] then
-		markers[id]:Destroy()
-		markers[id] = nil
+	if plsNoOverflow then return nil end
+	plsNoOverflow = true
+	local uid = unit:GetId()
+	if markers[uid] then
+		-- Clear target if targeted by Lockdown
 		if unit == uLastAutoTarget and GameLib.IsMouseLockOn() and unit == GameLib.GetTargetUnit() then
 			uCurrentTarget = nil
 			GameLib.SetTargetUnit()
 		end
 	end
-	if onscreen[id] then
-		onscreen[id] = nil
-	end
+	DestroyMarker(uid)
+	plsNoOverflow = false
 end
 
+-- Clear all units on world change
 function Lockdown:EventHandler_ChangeWorld()
-	for uid in pairs(onscreen) do
-		onscreen[uid] = nil
-	end
+	PLAYER = nil
 	for uid in pairs(markers) do
-		markers[uid]:Destroy()
-		markers[uid] = nil
+		DestroyMarker(uid)
 	end
 end
 
--- Check a marker (Unit) that just entered or left the screen
---  This function could possibly structured better
---  However, this is the way that most made sense at the time
-local eRewardQuest, eRewardScientist = Unit.CodeEnumRewardInfoType.Quest, Unit.CodeEnumRewardInfoType.Scientist
-function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
-	if not unit then unit = ctrl:GetUnit() end
-	-- Purge invalid or dead units
-	if not unit:IsValid() or unit:IsDead() then
-		self:EventHandler_UnitDestroyed(unit)
-		return
-	-- Visible units
-	elseif visible then
-		-- Basic relevance
-		if unit:ShouldShowNamePlate() and self.tTargetDispositions[unit:GetDispositionTo(GameLib.GetPlayerUnit())] then
-			onscreen[unit:GetId()] = unit
-			return
-		end			
-		-- Units we want based on activation state
-		local tAct = unit:GetActivationState()
-		-- Ignore settler "Minfrastructure"
-		-- TODO: Options to include/filter these things
-		local bActState = tAct and next(tAct) or false
-		if bActState then
-			-- Hide already activated quest objects
-			if tAct.QuestTarget and not (tAct.Interact and tAct.Interact.bCanInteract) then
-				onscreen[unit:GetId()] = nil
-				return
-			end
-			-- Hide settler collection or improvements
-			if g_isSettler and not opt.auto_target_settler and (tAct.SettlerMinfrastructure or (tAct.Collect and tAct.Collect.bUsePlayerPath)) then
-				onscreen[unit:GetId()] = nil
-				return
-			end
-			-- Generic activateable objects
-			local t = tAct.Interact
-			if t and (t.bCanInteract or t.bIsHighlightable or t.bShowCallout) then
-				onscreen[unit:GetId()] = unit
-				return
-			end
-			-- Quest turn-ins
-			if tAct.QuestReward and tAct.QuestReward.bIsActive and tAct.QuestReward.bCanInteract then
-				onscreen[unit:GetId()] = unit
-				return
-			end
-			-- Quest starting objects
-			if tAct.QuestNew and tAct.QuestNew.bCanInteract then
-				onscreen[unit:GetId()] = Unit
-				return
-			end
-			-- Scientist scans
-			if g_isScientist then
-				-- Datacubes
-				if (tAct.Datacube and tAct.Datacube.bIsActive)
-				-- Raw scannable items (information constructs)
-					or (tAct.ScientistRawScannable and tAct.ScientistRawScannable.bIsActive) then
-					onscreen[unit:GetId()] = unit
-					return
-				end
-			end
-		end
-		-- Units we want based on quest or path status
-		local tRewards = unit:GetRewardInfo()
-		if tRewards then
-			for i=1,#tRewards do
-				local t = tRewards[i] --t.eType == eRewardQuest and 
-				-- Quest items we need and haven't interacted with
-				if (t.peoObjective and t.peoObjective:GetStatus() == 1)
-					or (t.nCompleted and t.nCompleted < t.nNeeded and (not bActState or not tAct.Interact or tAct.Interact.bCanInteract))
-					-- or scientist scans
-					 or (t.eType == eRewardScientist and g_isScientist) then
-					onscreen[unit:GetId()] = unit
-					return
-				end
-			end
-		end
-	end
-	-- Invisible or otherwise undesirable units
-	onscreen[unit:GetId()] = nil
+function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible)
+	self:Handler_ProcessUnit(ctrl:GetUnit(), visible)
 end
-
-
 
 local function count(t)
 	local n = 0
@@ -529,51 +528,55 @@ function Lockdown:EventHandler_WorldLocationOnScreen(wnd, ctrl, visible, unit)
 	end
 end]]
 
--- Scan lists of markers in order of priority based on current state
- -- If reticle center within range of unit center (reticle size vs estimated object size)
- -- If object meets criteria (Node range, ally health)
 local pReticle, nReticleRadius
+-- Returns bIntersects, nDistIntersection, nDistPoints
+local function UnitInReticle(unit)
+	local tPos = GameLib.GetUnitScreenPosition(unit)
+	if not tPos or not tPos.bOnScreen then
+		return false, 0, 0
+	end
+	-- Try to place unit point in middle of units
+	local nUnitRadius, pOverhead = 0
+	if unit:GetType() ~= "Simple" then
+		pOverhead = unit:GetOverheadAnchor()
+		-- Sanity check radius
+		if pOverhead then
+			nUnitRadius = math.max(15, (tPos.nY - pOverhead.y) / 2)
+		end
+	end
+	local nDistPoints = pReticle.Length(Vector2.New(tPos.nX, tPos.nY - nUnitRadius) - pReticle)
+	return nDistPoints < (nReticleRadius + nUnitRadius), nDistPoints - nReticleRadius - nUnitRadius, nDistPoints
+end
+
+-- Find in range unit closest to center of reticle
 local uDelayedTarget, uLockedTarget
 local nLastTargetTick -- Used to mitigate untargetable units
-function Lockdown:TimerHandler_HAL()
-	local player = GameLib.GetPlayerUnit()
-	if not player or uLockedTarget then return end
-	-- Grab local references to things we're going to use each iteration
-	local NewPoint, PointLength = Vector2.New, pReticle.Length
-	local GetUnitScreenPosition = GameLib.GetUnitScreenPosition
-	local GetOverheadAnchor = player.GetOverheadAnchor
-	local IsDead, IsOccluded = player.IsDead, player.IsOccluded
+local nLastTargetFrame
+function Lockdown:UpdateReticleTarget()
+	if not PLAYER or uLockedTarget then return end
 	uCurrentTarget = GameLib.GetTargetUnit()
+	-- Clear targets too far away from reticle
+	if uCurrentTarget and not uLockedTarget and self.settings.reticle_clear_distant_target and uCurrentTarget == uLastAutoTarget then
+		local bInReticle, nDistIntersection = UnitInReticle(uCurrentTarget)
+		if not bInReticle and nDistIntersection > self.settings.reticle_clear_distant_range then
+			GameLib.SetTargetUnit()
+		end
+	end
 	local nBest, uBest = 999
-	-- Iterate over onscreen units
-	for id, unit in pairs(onscreen) do
-		local tPos = GetUnitScreenPosition(unit)
-		-- Destroy markers we shouldn't be getting
-		if unit == player or IsDead(unit) then
-			self:EventHandler_UnitDestroyed(unit)
-		-- Verify that unit is still on screen
-		elseif tPos and tPos.bOnScreen and not IsOccluded(unit) then
-			-- Try to place unit point in middle of unit
-			local pOverhead, nUnitRadius = GetOverheadAnchor(unit), 0
-			if pOverhead then
-				nUnitRadius = (tPos.nY - pOverhead.y)/2
-				-- Sanity check radius
-				if nUnitRadius < 0 then
-					nUnitRadius = 15
-				end
-			end
+	for id, unit in pairs(inrange) do
+		if not unit:IsOccluded() then
 			-- Check reticle intersection
-			local nDist = PointLength(NewPoint(tPos.nX, tPos.nY - nUnitRadius) - pReticle)
-			if nDist < nBest and nDist < (nUnitRadius + nReticleRadius) then
+			local bInReticle, _, nDistPoints = UnitInReticle(unit)
+			if bInReticle and nDistPoints < nBest then
 				-- Verify possibly stale units
 				if unit == uLastAutoTarget and not uCurrentTarget then
 					-- SendVarToRover("Last lockdown target", unit)
-					self:EventHandler_WorldLocationOnScreen(nil, nil, true, unit)
-					if onscreen[unit:GetId()] then
-						nBest, uBest = nDist, unit
+					self:Handler_ProcessUnit(unit, true)
+					if onscreen[id] then
+						nBest, uBest = nDistPoints, unit
 					end
 				else
-					nBest, uBest = nDist, unit
+					nBest, uBest = nDistPoints, unit
 				end
 			end
 		end
@@ -582,6 +585,7 @@ function Lockdown:TimerHandler_HAL()
 	-- TODO: Re-add delayed targeting
 	if uBest and uCurrentTarget ~= uBest then
 		uCurrentTarget, uLastAutoTarget = uBest, uBest
+		-- Save tick to detect failed target attempts
 		nLastTargetTick = Apollo.GetTickCount()
 		if self.settings.auto_target then
 			GameLib.SetTargetUnit(uBest)
@@ -604,9 +608,6 @@ function Lockdown:ChangeSetting(setting, value)
 	end
 end
 
-function ChangeHandlers.auto_target_delay(value)
-	Lockdown.timerDelayedTarget:Set(value, false)
-end
 
 local function ReticleChanged()
 	Lockdown.wndReticle:Show(true)
@@ -716,10 +717,6 @@ function Lockdown:OnBtn_Unbind()
 	end
 end
 
-function Lockdown:OnBtn_ReloadUI()
-	self.settings._is_ahk_reload = true
-	RequestReloadUI()
-end
 
 function Lockdown:OnTab_General()
 	self.w.Content_General:Show(true)
@@ -743,7 +740,6 @@ function Lockdown:UpdateConfigUI()
 		bSettingsInit = true
 		-- Load settings window
 		self.wndOptions = Apollo.LoadForm("Lockdown.xml", "Lockdown_OptionsForm", nil, self)
-		self:RegisterWindow(self.wndOptions)
 		-- Reference all children by name
 		self.w = children_by_name(self.wndOptions)
 		w = self.w
@@ -847,7 +843,7 @@ end
 -- Store key and modifier check function
 local locktarget_key, locktarget_mod, manualtarget_key, manualtarget_mod
 local function Upvalues(whichkey, whichmod)
-	local mod = Lockdown.settings[whichmod]
+	local mod = opt[whichmod]
 	if mod == "shift" then
 		mod = Apollo.IsShiftKeyDown
 	elseif mod == "control" then
@@ -855,17 +851,12 @@ local function Upvalues(whichkey, whichmod)
 	else
 		mod = false
 	end
-	return Lockdown.settings[whichkey], mod
+	return opt[whichkey], mod
 end
 
 function Lockdown:KeyOrModifierUpdated()
 	locktarget_key, locktarget_mod = Upvalues("locktarget_key", "locktarget_mod")
 	manualtarget_key, manualtarget_mod = Upvalues("manualtarget_key", "manualtarget_mod")
-	if self.settings.free_with_alt or self.settings.free_with_ctrl or self.settings.free_with_shift then
-		self.timerFreeKeys:Start()
-	else
-		self.timerFreeKeys:Stop()
-	end
 end
 
 -- Keys
@@ -880,17 +871,18 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 		return
 	end
 
-	-- Open options on Escape
-	-- TODO: don't reset cursor position when a blocking window is still open
-	if iKey == 27 and bActiveIntent then
-		if not self:PollAllWindows() then
-			if GameLib.GetTargetUnit() then
-				GameLib.SetTargetUnit()
-				self.timerRelock:Start()
-			else
-				self:SuspendActionMode()
-			end
+	-- Manual target
+	if iKey == manualtarget_key and (not manualtarget_mod or manualtarget_mod()) then
+		if uCurrentTarget then
+			GameLib.SetTargetUnit(uCurrentTarget)
 		end
+
+	-- Open options on Escape
+	-- TODO: Pause locking for a short time after pressing escape
+	elseif iKey == 27 and LOCK_STATE then
+		PAUSED = true
+		self.timerEscResume:Start()
+
 	-- Lock target
 	elseif iKey == locktarget_key and (not locktarget_mod or locktarget_mod()) then
 		if uLockedTarget then
@@ -906,17 +898,24 @@ function Lockdown:EventHandler_SystemKeyDown(iKey, ...)
 	end
 end
 
+function Lockdown:TimerHandler_EscResume()
+	PAUSED = false
+end
+
 function Lockdown:TimerHandler_DelayedTarget()
-	if uDelayedTarget then
-		GameLib.SetTargetUnit(uDelayedTarget)
-	end
 end
 
 function Lockdown:EventHandler_TargetUnitChanged()
 	if not GameLib.GetTargetUnit() then
 		-- Simple method to prevent target spamming on untargetable mobs
-		if uLastAutoTarget and (Apollo.GetTickCount() - nLastTargetTick) == 0 then
-			onscreen[uLastAutoTarget:GetId()] = nil
+		-- if uLastAutoTarget and nLastTargetFrame == FRAME then
+		if uLastAutoTarget and nLastTargetTick == Apollo.GetTickCount() then
+			local uid = uLastAutoTarget:GetId()
+			if uid then
+				onscreen[uid] = nil
+				inrange[uid] = nil
+				suspended[uid] = os.time() + 5
+			end
 		end
 		uCurrentTarget = nil
 	end
@@ -926,6 +925,75 @@ function Lockdown:EventHandler_TargetUnitChanged()
 	end
 end
 
+local iSlow = 0
+-- Apparently fired every four frames
+function Lockdown:EventHandler_VarChange_FrameCount(_, nFrame)
+	-- Track state and manage reticle
+	local bState = GameLib.IsMouseLockOn()
+	if bState ~= LOCK_STATE then
+		LOCK_STATE = bState
+		self.wndReticle:Show(bState and self.settings.reticle_show)
+	end
+
+	-- Evaluate inrange units for a new target
+	if bState and not PAUSED then
+		self:UpdateReticleTarget()
+	end
+
+	-- Low rate updates
+	iSlow = iSlow + 1
+	-- if iSlow >= nSlowUpdateRate then
+	if iSlow >= 4 then
+		iSlow = 0
+		if PLAYER then
+			-- Update marker distances
+			if LOCK_STATE then
+				local origin = PLAYER:GetPosition()
+				local limit = self.settings.reticle_range_limit
+				for uid, unit in pairs(onscreen) do
+					local p = onscreen[uid]:GetPosition()
+					if p then
+						if Vector3.New(p.x - origin.x, p.y - origin.y, p.z - origin.z):Length() < limit then
+							if not inrange[uid] then
+								inrange[uid] = unit
+							end
+						elseif inrange[uid] then
+							inrange[uid] = nil
+						end
+					end
+				end
+			end
+			-- Update suspension list
+			if next(suspended) then
+				local now = os.time()
+				for uid, expires in pairs(suspended) do
+					if expires < now then
+						suspended[uid] = nil
+						self:Handler_ProcessUnit(GameLib.GetUnitById(uid))
+					end
+				end
+			end
+		else
+			-- Player is invalid on initial addon load
+			-- A UnitCreated event is not fired on initial load
+			-- It is also invalidated on changing worlds, but does get
+			-- a UnitCreated there. So we'll just timer it instead.
+			local player = GameLib.GetPlayerUnit()
+			if player and player:IsValid() then
+				PLAYER = player
+				-- Process buffer
+				for i=#buffered,1,-1 do
+					self:Handler_ProcessUnit(buffered[i])
+					buffered[i] = nil
+				end
+				-- Update player information
+				local nPath = PlayerPathLib.GetPlayerPathType()
+				g_isScientist = nPath == 2
+				g_isSettler = nPath == 1
+			end
+		end
+	end
+end
 
 
 ----------------------------------------------------------
