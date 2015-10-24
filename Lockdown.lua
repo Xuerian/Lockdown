@@ -198,7 +198,7 @@ end
 -- Saved data
 
 function Lockdown:OnSave(eLevel)
-	if eLevel == GameLib.CodeEnumAddonSaveLevel.General then
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
 		local s = self.settings
 		-- Don't save defaults
 		for k,v in pairs(s) do
@@ -211,7 +211,7 @@ function Lockdown:OnSave(eLevel)
 end
 
 function Lockdown:OnRestore(eLevel, tData)
-	if eLevel == GameLib.CodeEnumAddonSaveLevel.General and tData then
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account and tData then
 		local s = self.settings
 		-- Restore settings
 		for k,v in pairs(self.defaults) do
