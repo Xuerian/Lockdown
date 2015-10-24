@@ -700,11 +700,11 @@ end
 -- General handlers
 function Lockdown:OnConfigure()
 	self:UpdateConfigUI()
-	self.wndOptions:Show(true, true)
+	self.wndOptions:Invoke()
 end
 
 function Lockdown:OnConfigureClose()
-	self.wndOptions:Show(false, true)
+	self.wndOptions:Close()
 end
 
 function Lockdown:OnBtn_Unbind()
