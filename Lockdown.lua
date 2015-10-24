@@ -1,8 +1,3 @@
--- Addon authors or Carbine, to add a window to the list of pausing windows, call this for normal windows
--- Event_FireGenericEvent("CombatMode_RegisterPausingWindow", wndHandle[, bCheckOften])
-
--- Lockdown automatically detects immediately created escapable windows, but redundant registration is not harmful. 
-
 -- Lockdown contains a significant amount of code providing a expanded targeting system around a user-positioned reticle, since we cannot reposition the mouseover location.
 -- It must account for a few complications with the API to do so:
 -- Units are not well classified as units the player should care about or should be able to target, by default
@@ -10,65 +5,6 @@
 -- GameLib.SetTargetUnit(unit) called (It returns true or false based on if the player can target anything at the current time, not if the player can target [unit])
 --  "UnitCreated" and "TargetUnitChanged" are called during this call, and finish before it returns
 --  "TargetUnitChanged" is then called after it returns, inside the current frame.
-
-----------------------------------------------------------
--- Window lists
-
--- Add windows that don't close on escape here
--- Many Carbine windows must be caught via event handlers
--- since they get recreated and handles go stale. 
-local tAdditionalWindows = {
-	"RoverForm",
-	"GeminiConsoleWindow",
-	"KeybindForm",
-	"DuelRequest",
-	-- Necessary?
-	"RoleConfirm",
-	"JoinGame",
-	"VoteKick",
-	"VoteSurrender",
-	"AddonError",
-	"ResurrectDialog",
-	"ExitInstanceDialog",
-	"GuildDesignerForm",
-	"SupplySachelForm",
-	"ViragsSocialMainForm",
-	"AbilitiesBuilderForm",
-}
-
--- Add windows to ignore here
-local tIgnoreWindows = {
-	-- Floating text panes
-	StoryPanelInformational = true,
-	StoryPanelBubble = true,
-	StoryPanelBubbleCenter = true,
-	-- ProcsHUD
-	ProcsIcon1 = true,
-	ProcsIcon2 = true,
-	ProcsIcon3 = true,
-	-- ?
-	LootNotificationForm = true,
-	-- Clairvoyance mod, whose windows are all escapable for no good reason
-	ClairvoyanceNotification = true,
-	DisorientWindow = true,
-	WeaponIndicator = true,
-	-- Killing blow mod
-	KillingBlowAlert = true,
-	-- ZInterrupt
-	InterruptProgress = true,
-}
-
--- Add windows to be checked at a high rate here
-local tHotList = {
-	SpaceStashInventoryForm = true,
-	InventoryBag = true,
-	ProgressLogForm = true,
-	QuestWindow = true,
-	ZoneMapFrame = true,
-	QuestWindow_Metal = true,
-	QuestWindow_Holo = true,
-}
-
 
 ----------------------------------------------------------
 -- Localization
@@ -107,7 +43,6 @@ local L = setmetatable({}, {__index = tLocalization.en_us})
 -- I don't even know who this is from
 -- Three different mods have three different versions
 local SystemKeyMap
-local bActiveIntent
 
 
 ----------------------------------------------------------
@@ -242,11 +177,17 @@ end
 
 
 ----------------------------------------------------------
--- Because Carbine does it
+-- Module stuff
+
+function Lockdown:RegisterEventHandler(event, handler)
+	handler = handler or "EventHandler_"..event
+	assert(self[handler], "Requested event handler does not exist")
+	Apollo.RegisterEventHandler(event, handler, self)
+end
 
 function Lockdown:Init()
 	Apollo.RegisterAddon(self, true, L.button_configure)
-	Apollo.RegisterEventHandler("UnitCreated", "PreloadHandler_UnitCreated", self)
+	self:RegisterEventHandler("UnitCreated", "PreloadHandler_UnitCreated")
 end
 
 
@@ -303,7 +244,7 @@ function Lockdown:OnLoad()
 	self:AddReticle("giznat", [[Lockdown\reticles\giznat.png]], 128)
 	self:Reticle_Update()
 	self.wndReticle:Show(GameLib.IsMouseLockOn())
-	Apollo.RegisterEventHandler("ResolutionChanged", "Reticle_Update", self)
+	self:RegisterEventHandler("ResolutionChanged", "Reticle_Update")
 
 
 	----------------------------------------------------------
@@ -315,7 +256,7 @@ function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Targeting
 
-	Apollo.RegisterEventHandler("TargetUnitChanged", "EventHandler_TargetUnitChanged", self)
+	self:RegisterEventHandler("TargetUnitChanged")
 	self.timerRelock = ApolloTimer.Create(0.01, false, "TimerHandler_Relock", self)
 	self.timerRelock:Stop()
 	self.timerDelayedTarget = ApolloTimer.Create(1, false, "TimerHandler_DelayedTarget", self)
@@ -324,7 +265,7 @@ function Lockdown:OnLoad()
 	----------------------------------------------------------
 	-- Keybinds
 
-	Apollo.RegisterEventHandler("SystemKeyDown", "EventHandler_SystemKeyDown", self)
+	self:RegisterEventHandler("SystemKeyDown")
 
 	self:KeyOrModifierUpdated()
 
@@ -350,6 +291,8 @@ function Lockdown:InitHAL()
 	Apollo.RegisterEventHandler("UnitGibbed", "EventHandler_UnitDestroyed", self)
 	Apollo.RegisterEventHandler("UnitActivationTypeChanged", "RefreshUnit", self)
 	Apollo.RegisterEventHandler("ChangeWorld", "EventHandler_WorldChange", self)
+	self:RegisterEventHandler("UnitDestroyed")
+	self:RegisterEventHandler("ChangeWorld")
 	-- Process pre-load units
 	for i=1,#preload_units do
 		self:EventHandler_UnitCreated(preload_units[i])
@@ -448,7 +391,7 @@ function Lockdown:EventHandler_UnitDestroyed(unit)
 	end
 end
 
-function Lockdown:EventHandler_WorldChange()
+function Lockdown:EventHandler_ChangeWorld()
 	for uid in pairs(onscreen) do
 		onscreen[uid] = nil
 	end
