@@ -1,15 +1,2 @@
 package-as: Lockdown
 enable-nolib-creation: no
-
-externals:
-	MouselockRebind:
-		url: https://github.com/Xuerian/WildstarMouselockRebind.git
-		tag: latest
-
-move-folders:
-	Lockdown/MouselockRebind/MouselockRebind.ahk: Lockdown
-	Lockdown/MouselockRebind/wildstar_icon.ico: Lockdown
-
-ignore:
-	- Lockdown/MouselockRebind/LICENSE
-	- Lockdown/MouselockRebind/README.md
