@@ -281,6 +281,8 @@ function Lockdown:OnLoad()
 
 	self.xmlMarker = XmlDoc.CreateFromFile("Lockdown_Marker.xml")
 	self:RegisterEventHandler("UnitActivationTypeChanged", "Handler_ProcessUnit")
+	self:RegisterEventHandler("UnitMiniMapMarkerChanged", "Handler_ProcessUnit")
+	self:RegisterEventHandler("UnitGibbed", "Handler_ProcessUnit")
 	self:RegisterEventHandler("UnitDestroyed")
 	self:RegisterEventHandler("ChangeWorld")
 	self:RegisterEventHandler("TargetUnitChanged")
