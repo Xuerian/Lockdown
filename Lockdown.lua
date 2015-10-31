@@ -556,7 +556,6 @@ end
 
 -- Find in range unit closest to center of reticle
 local uDelayedTarget, uLockedTarget
-local nLastTargetTick -- Used to mitigate untargetable units
 local nLastTargetFrame
 function Lockdown:UpdateReticleTarget()
 	if not PLAYER or uLockedTarget then return end
@@ -592,7 +591,7 @@ function Lockdown:UpdateReticleTarget()
 	if uBest and uCurrentTarget ~= uBest then
 		uCurrentTarget, uLastAutoTarget = uBest, uBest
 		-- Save tick to detect failed target attempts
-		nLastTargetTick = Apollo.GetTickCount()
+		nLastTargetFrame = FRAME
 		if self.settings.auto_target then
 			GameLib.SetTargetUnit(uBest)
 		end
@@ -914,8 +913,7 @@ end
 function Lockdown:EventHandler_TargetUnitChanged()
 	if not GameLib.GetTargetUnit() then
 		-- Simple method to prevent target spamming on untargetable mobs
-		-- if uLastAutoTarget and nLastTargetFrame == FRAME then
-		if uLastAutoTarget and nLastTargetTick == Apollo.GetTickCount() then
+		if uLastAutoTarget and nLastTargetFrame == FRAME then
 			local uid = uLastAutoTarget:GetId()
 			if uid then
 				onscreen[uid] = nil
@@ -931,6 +929,13 @@ function Lockdown:EventHandler_TargetUnitChanged()
 	end
 end
 
+function Lockdown:EventHandler_NextFrame(...)
+	if FRAME >= 255 then
+		FRAME = FRAME + 1
+	else
+		FRAME = 0
+	end
+end
 local iSlow = 0
 -- Apparently fired every four frames
 function Lockdown:EventHandler_VarChange_FrameCount(_, nFrame)
