@@ -268,6 +268,7 @@ function Lockdown:OnLoad()
 	-- TICK TOCK TICK TOCK
 
 	self:RegisterEventHandler("VarChange_FrameCount")
+	self:RegisterEventHandler("NextFrame")
 
 	----------------------------------------------------------
 	-- Options
@@ -328,6 +329,9 @@ local function IsDesiredUnit(unit)
 	
 	-- Visible plates
 	elseif unit:ShouldShowNamePlate() and unit:GetDispositionTo(player) ~= Unit.CodeEnumDisposition.Friendly then
+		if unit:IsDead() then
+			return false
+		end
 		return true
 	end
 
