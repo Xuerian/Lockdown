@@ -1001,6 +1001,8 @@ function Lockdown:EventHandler_VarChange_FrameCount(_, nFrame)
 				local nPath = PlayerPathLib.GetPlayerPathType()
 				g_isScientist = nPath == 2
 				g_isSettler = nPath == 1
+			elseif PLAYER then
+				PLAYER = nil
 			end
 		end
 	end
