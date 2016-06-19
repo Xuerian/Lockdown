@@ -959,7 +959,8 @@ function Lockdown:EventHandler_VarChange_FrameCount(_, nFrame)
 		if PLAYER then
 			-- Update marker distances
 			if LOCK_STATE then
-				local origin = PLAYER:GetPosition()
+				local vehicle = GameLib.GetPlayerVehicleUnit()
+				local origin = (vehicle and vehicle or PLAYER):GetPosition()
 				local limit = self.settings.reticle_range_limit
 				for uid, unit in pairs(onscreen) do
 					local p = onscreen[uid]:GetPosition()
