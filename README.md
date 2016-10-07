@@ -1,4 +1,4 @@
-LockDown
+Lockdown
 ==========
 
-Automatic combat mode addon
+Automatic Mouse Lock targeting and crosshair addon

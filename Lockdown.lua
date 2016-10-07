@@ -267,7 +267,7 @@ function Lockdown:OnLoad()
 	----------------------------------------------------------------------
 	-- TICK TOCK TICK TOCK
 
-	self:RegisterEventHandler("VarChange_FrameCount")
+	self:RegisterEventHandler("FrameCount")
 	self:RegisterEventHandler("NextFrame")
 
 	----------------------------------------------------------
@@ -929,16 +929,17 @@ function Lockdown:EventHandler_TargetUnitChanged()
 	end
 end
 
-function Lockdown:EventHandler_NextFrame(...)
-	if FRAME >= 255 then
+function Lockdown:EventHandler_NextFrame()
+	if FRAME >= 254 then
 		FRAME = FRAME + 1
 	else
 		FRAME = 0
 	end
 end
+
 local iSlow = 0
 -- Apparently fired every four frames
-function Lockdown:EventHandler_VarChange_FrameCount(_, nFrame)
+function Lockdown:EventHandler_FrameCount(_, nFrame)
 	-- Track state and manage reticle
 	local bState = GameLib.IsMouseLockOn()
 	if bState ~= LOCK_STATE then
